@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
 from datetime import datetime
 from typing import List
 from sqlalchemy.dialects.postgresql import INET
-from all_seeing_eye.database import engine
+from all_seeing_eye.database.session import engine
 
 class Base(DeclarativeBase):
     pass
