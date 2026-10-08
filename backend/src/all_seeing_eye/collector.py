@@ -1,12 +1,4 @@
-"""SSH-Collector für All Seeing Eye (Cisco und FortiOS).
 
-Teil 1 (1.2.2.7 / ASE-69): SSH-Verbindung und Verbindungsbehandlung
-Teil 2 (1.2.2.8 / ASE-70): Cisco-Konfigurationen auslesen
-Teil 3 (1.2.2.9 / ASE-71): FortiOS-Konfigurationen auslesen
-
-Es werden ausschließlich lesende Befehle aus einer Whitelist ausgeführt.
-Jede Abfrage wird im Audit-Log protokolliert. Passwörter werden nie geloggt.
-"""
 import logging
 import re
 import time
@@ -20,16 +12,13 @@ from netmiko.exceptions import (NetmikoAuthenticationException,
 
 try:
     from .models import Device, RawConfig
-except ImportError:  # direkt aus dem Ordner gestartet
+except ImportError:
     from models import Device, RawConfig
 
 logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("collector.audit")
 
 
-# =====================================================================
-# Teil 1: SSH-Verbindung und Verbindungsbehandlung (ASE-69)
-# =====================================================================
 
 class SSHAuthenticationError(Exception):
     """Benutzername oder Passwort falsch."""
@@ -45,11 +34,11 @@ class SSHConnectionClosedError(Exception):
 
 @dataclass
 class ConnectionSettings:
-    retries: int = 2               # Wiederholungen bei Timeout
-    retry_delay: float = 3.0       # Wartezeit in Sekunden (wird pro Versuch länger)
-    timeout: int = 15              # Sekunden für Verbindung, Login und Banner
-    strict_host_key: bool = False  # True = nur bekannte Host-Keys akzeptieren
-    allow_telnet: bool = False     # True = Telnet erlauben (unverschlüsselt, nur im Lab!)
+    retries: int = 2
+    retry_delay: float = 3.0
+    timeout: int = 15
+    strict_host_key: bool = False
+    allow_telnet: bool = False
 
 
 def open_connection(device: Device, settings: ConnectionSettings | None = None):
@@ -75,7 +64,7 @@ def open_connection(device: Device, settings: ConnectionSettings | None = None):
         try:
             return ConnectHandler(**params)
         except NetmikoAuthenticationException as e:
-            # Kein Retry: sonst droht eine Account-Sperre
+
             raise SSHAuthenticationError(f"{device.host}: Authentifizierung fehlgeschlagen") from e
         except NetmikoTimeoutException as e:
             last_error = e
@@ -90,11 +79,7 @@ def open_connection(device: Device, settings: ConnectionSettings | None = None):
     raise SSHUnreachableError(f"{device.host}: Gerät nicht erreichbar") from last_error
 
 
-# =====================================================================
-# Teil 2: Cisco-Konfigurationen auslesen (ASE-70)
-# =====================================================================
 
-# Nur diese Befehle (bzw. Anfänge davon) sind erlaubt -> read-only
 ALLOWED_COMMANDS = (
     "show running-config",
     "show startup-config",
@@ -121,19 +106,11 @@ ALLOWED_COMMANDS = (
     "show cdp neighbors",
     "show lldp neighbors",
 )
-# Erlaubte Filter nach dem Pipe-Zeichen (kein "| redirect", "| tee", ...)
+
 ALLOWED_FILTERS = ("include", "exclude", "section", "begin")
 
 DEFAULT_COMMANDS = ("show running-config", "show version", "show cdp neighbors")
 
-# ---------------------------------------------------------------------
-# FortiOS (ASE-71)
-# ---------------------------------------------------------------------
-# Erlaubt sind nur "show" und "get", beide rein lesend. "config", "execute",
-# "diagnose", "set", "edit", "delete" usw. bleiben gesperrt.
-# Hinweis: Netmiko führt beim FortiOS-Login selbst ein paar lesende get-Befehle
-# aus (stehen nicht im Audit-Log). Nur wenn auf dem Gerät "output more" eingestellt
-# ist, stellt Netmiko kurz "set output standard" ein und setzt es beim Trennen zurück.
 FORTINET_ALLOWED_COMMANDS = ("show", "get")
 FORTINET_ALLOWED_FILTERS = ("grep",)
 
@@ -158,8 +135,7 @@ def vendor_of(device_type: str) -> str:
     """Leitet aus dem Netmiko-Gerätetyp den Hersteller ab ('cisco' oder 'fortinet')."""
     return "fortinet" if device_type.lower().startswith(("fortinet", "fortios")) else "cisco"
 
-# Console-Modus (Telnet): fester Prompt statt automatischer Erkennung, weil die
-# GNS3-Console zwischendurch Logmeldungen ausgibt und die Erkennung sonst scheitert
+
 CONSOLE_PROMPT = r"\S+#\s*$"
 
 
@@ -186,7 +162,6 @@ class ConfigCollector:
         self.read_timeout = read_timeout
         self.settings = settings or ConnectionSettings()
 
-    # ---------- Sicherheit ----------
     @staticmethod
     def is_allowed(command: str, vendor: str = "cisco") -> bool:
         """Prüft, ob ein Befehl in der Whitelist steht und keine Tricks enthält."""
@@ -207,7 +182,7 @@ class ConfigCollector:
         audit_logger.info("time=%s host=%s command=%r status=%s",
                           datetime.now(timezone.utc).isoformat(), host, command, status)
 
-    # ---------- Sammeln ----------
+
     def collect_device(self, device: Device,
                        commands: tuple[str, ...] | list[str] | dict | None = None) -> CollectionResult:
         """commands: None = Standardbefehle des Herstellers, Liste = für dieses Gerät,
@@ -222,7 +197,6 @@ class ConfigCollector:
         result = CollectionResult(host=device.host, port=device.port,
                                   started_at=datetime.now(timezone.utc).isoformat())
 
-        # Befehle prüfen, bevor überhaupt verbunden wird
         allowed = []
         for cmd in commands:
             if self.is_allowed(cmd, vendor):
@@ -306,7 +280,6 @@ class ConfigCollector:
                 results.append(future.result())
         return results
 
-    # ---------- Kompatibilität mit dem bisherigen Code ----------
     def send_command(self, device: Device, command: str) -> RawConfig:
         result = self.collect_device(device, [command])
         if result.error:

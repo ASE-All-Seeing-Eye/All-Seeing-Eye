@@ -1,12 +1,4 @@
-"""Liest die vier GNS3-Router (und die FortiGate) aus und speichert die Ausgaben.
 
-Zwei Modi (siehe USE_CONSOLE):
-  True  = nur Router nötig: Telnet über die GNS3-Console (nur fürs Lab)
-  False = SSH über die Management-IP (braucht Cloud + Switch; nur hier wird auch die FortiGate abgefragt)
-
-Start (im Ordner mit collector.py und models.py):
-    python "Run gns3.py"
-"""
 import logging
 import re
 from pathlib import Path
@@ -14,35 +6,33 @@ from pathlib import Path
 try:
     from .collector import ConfigCollector, ConnectionSettings
     from .models import Device
-except ImportError:  # direkt aus dem Ordner gestartet
+except ImportError:
     from collector import ConfigCollector, ConnectionSettings
     from models import Device
 
-# ---- An deine Konfiguration anpassen ----
+
 USE_CONSOLE = False
 
-# Modus Console: GNS3-VM und Console-Ports (rechts in "Topology Summary")
+
 GNS3_VM = "192.168.83.128"
 CONSOLE_PORTS = {"Router1": 5005, "Router2": 5024, "Router3": 5001, "Router4": 5003}
 
-# Modus SSH: Management-IPs und Zugangsdaten
+
 SSH_IPS = {"Router1": "192.168.83.11", "Router2": "192.168.83.12",
            "Router3": "192.168.83.13", "Router4": "192.168.83.14"}
 USERNAME = "admin"
 PASSWORD = "cisco123"
 
-SECRET = "cisco123"   # Enable-Passwort (nur Cisco)
+SECRET = "cisco123"
 
-# FortiGate (nur im SSH-Modus): Management-IP und Zugangsdaten
+
 FORTIGATES = {"FortiGate1": "192.168.83.20"}
 FORTIGATE_USER = "admin"
 FORTIGATE_PASSWORD = "admin"
 
 OUTPUT_DIR = Path("gns3_output")
 
-# Diese Befehle werden je Hersteller ausgeführt (nur Befehle aus der Whitelist
-# im Collector sind erlaubt). Über die Console dauert jeder Befehl ein paar Sekunden,
-# nicht benötigte Zeilen einfach auskommentieren.
+
 CISCO_COMMANDS = [
     "show running-config",
     "show startup-config",
@@ -63,7 +53,7 @@ CISCO_COMMANDS = [
 ]
 FORTINET_COMMANDS = [
     "get system status",
-    "show",                              # Konfiguration (nur Abweichungen vom Standard)
+    "show",
     "get system interface physical",
     "get router info routing-table all",
     "get router info ospf neighbor",
