@@ -11,7 +11,7 @@ from netmiko.exceptions import (NetmikoAuthenticationException,
                                 NetmikoTimeoutException)
 
 try:
-    from .models import Device, RawConfig
+    from backend.src.all_seeing_eye.collector.models import Device, RawConfig
 except ImportError:
     from models import Device, RawConfig
 

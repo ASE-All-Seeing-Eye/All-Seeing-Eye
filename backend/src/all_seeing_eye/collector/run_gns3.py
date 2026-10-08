@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 
 try:
-    from .collector import ConfigCollector, ConnectionSettings
-    from .models import Device
+    from backend.src.all_seeing_eye.collector import ConfigCollector, ConnectionSettings
+    from backend.src.all_seeing_eye.collector.models import Device
 except ImportError:
     from collector import ConfigCollector, ConnectionSettings
     from models import Device
@@ -30,7 +30,7 @@ FORTIGATES = {"FortiGate1": "192.168.83.20"}
 FORTIGATE_USER = "admin"
 FORTIGATE_PASSWORD = "admin"
 
-OUTPUT_DIR = Path("gns3_output")
+OUTPUT_DIR = Path("../gns3_output")
 
 
 CISCO_COMMANDS = [
