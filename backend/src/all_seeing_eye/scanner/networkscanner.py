@@ -38,9 +38,7 @@ class PortResult:
 
 
 class TargetParser:
-    def __init__(self) -> None:
 
-    @staticmethod
     def parse_targets(self, value: str) -> list[str]:
         value = value.strip()
 
