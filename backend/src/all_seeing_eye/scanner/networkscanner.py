@@ -14,7 +14,6 @@ class Device:
     os_version: str
 
 
-
 class TcpProbe:
 
     def __init__(self, timeout: float) -> None:
