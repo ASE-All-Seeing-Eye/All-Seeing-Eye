@@ -1,0 +1,113 @@
+{
+  "devices": [
+    {
+      "id": "SW01",
+      "manufacturer": "Cisco",
+      "model": "Catalyst 9300",
+      "status": "analysiert"
+    },
+    {
+      "id": "FW01",
+      "manufacturer": "Fortinet",
+      "model": "FortiGate 60F",
+      "status": "analysiert"
+    },
+    {
+      "id": "RTR01",
+      "manufacturer": "Cisco",
+      "model": "ISR 4331",
+      "status": "analysiert"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "device_id": "SW01",
+      "title": "Telnet für die Administration aktiviert",
+      "category": "Management",
+      "severity": "HIGH",
+      "evidence": {
+        "telnet_enabled": true,
+        "ssh_enabled": true,
+        "management_ip": "10.0.20.11",
+        "management_access_allowed_from": "10.0.20.0/24"
+      },
+      "approved_recommendation": "Telnet deaktivieren und ausschließlich SSH für die Administration verwenden."
+    },
+    {
+      "id": "F-002",
+      "device_id": "SW01",
+      "title": "SNMPv2c mit Community public aktiviert",
+      "category": "Monitoring",
+      "severity": "MEDIUM",
+      "evidence": {
+        "snmp_enabled": true,
+        "snmp_version": "2c",
+        "community": "public",
+        "access_mode": "read-only",
+        "source_restriction_configured": false
+      },
+      "approved_recommendation": "Auf SNMPv3 mit Authentifizierung und Verschlüsselung umstellen und den Zugriff auf berechtigte Monitoring-Systeme beschränken."
+    },
+    {
+      "id": "F-003",
+      "device_id": "FW01",
+      "title": "Uneingeschränkte eingehende Freigabe zum Servernetz",
+      "category": "Firewall",
+      "severity": "CRITICAL",
+      "evidence": {
+        "policy_id": 12,
+        "enabled": true,
+        "source_interface": "wan1",
+        "destination_interface": "servers",
+        "source_network": "0.0.0.0/0",
+        "destination_network": "10.0.30.0/24",
+        "service": "ALL",
+        "action": "accept",
+        "logging_enabled": false
+      },
+      "approved_recommendation": "Die Freigabe fachlich prüfen und auf benötigte Quellen, Zielsysteme und Dienste beschränken. Nicht benötigte Freigaben entfernen und die Verbindungsprotokollierung aktivieren."
+    },
+    {
+      "id": "F-004",
+      "device_id": "FW01",
+      "title": "Webadministration über HTTP aktiviert",
+      "category": "Management",
+      "severity": "HIGH",
+      "evidence": {
+        "interface": "internal",
+        "interface_ip": "10.0.20.1",
+        "http_management_enabled": true,
+        "https_management_enabled": true,
+        "trusted_admin_hosts_configured": false
+      },
+      "approved_recommendation": "HTTP für die Administration deaktivieren, HTTPS verwenden und administrative Zugriffe auf berechtigte Management-Systeme beschränken."
+    },
+    {
+      "id": "F-005",
+      "device_id": "RTR01",
+      "title": "Keine zentrale Protokollierung konfiguriert",
+      "category": "Logging",
+      "severity": "MEDIUM",
+      "evidence": {
+        "local_logging_enabled": true,
+        "remote_logging_enabled": false,
+        "syslog_servers": []
+      },
+      "approved_recommendation": "Einen zentralen Logging-Server konfigurieren und sicherheitsrelevante Ereignisse dorthin übertragen. Lokale Protokollierung ergänzend beibehalten."
+    },
+    {
+      "id": "F-006",
+      "device_id": "RTR01",
+      "title": "Keine NTP-Zeitquelle konfiguriert",
+      "category": "System",
+      "severity": "LOW",
+      "evidence": {
+        "ntp_servers": [],
+        "time_synchronized": false,
+        "timezone": "Europe/Vienna"
+      },
+      "approved_recommendation": "Eine vertrauenswürdige NTP-Zeitquelle konfigurieren und die erfolgreiche Zeitsynchronisation überprüfen."
+    }
+  ]
+}
