@@ -14,7 +14,6 @@ class Device:
     os_version: str
 
 
-
 class TcpProbe:
 
     def __init__(self, timeout: float) -> None:
@@ -38,9 +37,7 @@ class PortResult:
 
 
 class TargetParser:
-    def __init__(self) -> None:
 
-    @staticmethod
     def parse_targets(self, value: str) -> list[str]:
         value = value.strip()
 

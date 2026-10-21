@@ -8,7 +8,9 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.142.1",
+    "ollama>=0.6.3",
     "psycopg[binary]>=3.3.5",
+    "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "sqlalchemy>=2.0.52",
     "uvicorn[standard]>=0.54.0",

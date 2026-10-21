@@ -1,0 +1,21 @@
+{
+  "job_id": 1,
+  "analysis_id": 42,
+  "findings": [
+    {
+      "id": 1,
+      "analysis_id": 42,
+      "rule_id": 3,
+      "detected_by": "rule",
+      "title": "Telnet aktiviert",
+      "category": "Management",
+      "severity": "HIGH",
+      "description": "Die Administration über Telnet ist aktiviert.",
+      "reason": "Telnet überträgt Daten unverschlüsselt.",
+      "recommendation": "Telnet deaktivieren und SSH verwenden.",
+      "evidence": {
+        "telnet_enabled": true
+      }
+    }
+  ]
+}
