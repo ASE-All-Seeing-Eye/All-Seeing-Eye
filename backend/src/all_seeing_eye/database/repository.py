@@ -24,6 +24,34 @@ def get_job(job_id: int) -> dict | None:
         data["has_report"] = job.report is not None
         return data
 
+def create_or_update_device(management_ip: str, hostname: str | None = None,
+                            vendor: str | None = None, model: str | None = None,
+                            os_type: str | None = None, os_version: str | None = None) -> int:
+    with SessionFactory() as session:
+        device = session.scalar(select(Device).where(Device.management_ip == management_ip))
+        if device is None:
+            device = Device(management_ip=management_ip)
+            session.add(device)
+
+        if hostname is not None:
+            device.hostname = hostname
+        if vendor is not None:
+            device.vendor = vendor
+        if model is not None:
+            device.model = model
+        if os_type is not None:
+            device.os_type = os_type
+        if os_version is not None:
+            device.os_version = os_version
+
+        session.commit()
+        return device.id
+
+def get_device(management_ip: str) -> dict | None:
+    with SessionFactory() as session:
+        device = session.scalar(select(Device).where(Device.management_ip == management_ip))
+        return device.to_dict() if device else None
+
 def list_devices() -> list[dict]:
     with SessionFactory() as session:
         devices = session.scalars(select(Device)).all()
@@ -45,6 +73,20 @@ def get_report(job_id: int) -> dict | None:
     with SessionFactory() as session:
         report = session.scalar(select(Report).where(Report.job_id == job_id))
         return report.to_dict() if report else None
+
+def get_devices_of_job(job_id: int) -> list[dict]:
+    with SessionFactory() as session:
+        statement = (
+            select(Device, Collection.status)
+            .join(Collection, Collection.device_id == Device.id)
+            .where(Collection.job_id == job_id)
+        )
+        result = []
+        for device, status in session.execute(statement).all():
+            data = device.to_dict()
+            data["collection_status"] = status
+            result.append(data)
+        return result
 
 def add_finding(analysis_id: int, detected_by: str, title: str, category: str, severity: str, 
                 description: str, reason: str, recommendation: str, evidence: str | None = None,
