@@ -2,7 +2,8 @@
 
 Start (im Ordner backend):
     uv run python -m all_seeing_eye.analysis.demo src/all_seeing_eye/collector/gns3_output/R1
-    uv run python -m all_seeing_eye.analysis.demo src/all_seeing_eye/collector/gns3_output/FortiGate-1
+    uv run python -m all_seeing_eye.analysis.demo src/all_seeing_eye/collector/gns3_output/R1 src/all_seeing_eye/collector/gns3_output/R2
+    uv run python -m all_seeing_eye.analysis.demo src/all_seeing_eye/collector/gns3_output     # alle Geräte
 
 Die Regeln unten sind nur Beispiele für die Demo, die echten kommen später aus der Tabelle securityrule.
 """
@@ -58,15 +59,45 @@ def read_outputs(folder: Path) -> list[tuple[str, str]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Demo: Konfigurations-Analyse mit Ollama")
-    parser.add_argument("folder", type=Path, help="Ordner mit den .txt-Ausgaben eines Geräts")
+    parser.add_argument("folders", nargs="+", type=Path,
+                        help="Geräte-Ordner mit .txt-Ausgaben, oder gns3_output für alle Geräte darin")
     args = parser.parse_args()
     # verworfene LLM-Antworten nicht mitten in die Ausgabe schreiben
     logging.getLogger(analyzer.__name__).setLevel(logging.ERROR)
 
-    hostname = args.folder.name
-    sections = read_outputs(args.folder)
-    if not sections:
-        raise SystemExit(f"Keine .txt-Dateien in {args.folder}")
+    devices = device_folders(args.folders)
+    if not devices:
+        raise SystemExit("Keine .txt-Dateien gefunden.")
+
+    results = []
+    for folder in devices:
+        try:
+            results.append(analyze_folder(folder))
+        except Exception as e:      # ein Gerät darf die Demo nicht abbrechen
+            print(f"\n  {folder.name}: FEHLER ({e})\n")
+
+    if len(devices) > 1:
+        print("=== Übersicht ===")
+        print(f"{'Gerät':<14}{'Bewertung':<11}{'Score':>5}  Befunde")
+        for result in results:
+            print(f"{result.hostname:<14}{result.rating:<11}{result.score:>5}  {len(result.findings)}")
+        print()
+
+
+def device_folders(paths: list[Path]) -> list[Path]:
+    """Ein Ordner mit .txt-Dateien ist ein Gerät, sonst werden seine Unterordner genommen."""
+    folders = []
+    for path in paths:
+        if any(path.glob("*.txt")):
+            folders.append(path)
+        else:
+            folders += sorted(p for p in path.iterdir() if p.is_dir() and any(p.glob("*.txt")))
+    return folders
+
+
+def analyze_folder(folder: Path) -> analyzer.Assessment:
+    hostname = folder.name
+    sections = read_outputs(folder)
     vendor = "fortinet" if any(name.startswith("get system") for name, _ in sections) else "cisco"
 
     print(f"\n=== All Seeing Eye – Analyse von {hostname} ({vendor}) ===\n")
@@ -107,6 +138,7 @@ def main() -> None:
     if not result.findings:
         print("\n  Keine Befunde.")
     print()
+    return result
 
 
 if __name__ == "__main__":
