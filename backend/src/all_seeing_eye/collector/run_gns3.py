@@ -1,4 +1,5 @@
-"""Liest alle Geräte aus der Datenbank aus und speichert die Ausgaben als Configuration.
+"""Liest alle Geräte aus der Datenbank aus und speichert die Ausgaben als Job mit einer
+Collection pro Gerät (Command pro Befehl, Konfiguration zusätzlich als Configuration).
 
 Start (im Ordner backend):
     uv run python -m all_seeing_eye.collector.run_gns3
@@ -71,7 +72,7 @@ def seed_lab_devices(session) -> None:
     known = {str(ip) for ip in session.scalars(select(Device.management_ip))}
     for name, vendor, ip in LAB_DEVICES:
         if ip not in known:
-            session.add(Device(hostname=name, vendor=vendor, os_version="", management_ip=ip))
+            session.add(Device(hostname=name, vendor=vendor, management_ip=ip))
     session.flush()
 
 
@@ -82,28 +83,32 @@ def main() -> None:
         seed_lab_devices(session)
         repo = CollectionRepository(session)
         devices = {str(d.management_ip): d for d in repo.devices()}
+        job = repo.create_job(target="GNS3-Lab")
 
         targets = [to_target(d, CREDENTIALS[vendor_key(d.vendor)]) for d in devices.values()]
         collector = ConfigCollector(settings=ConnectionSettings(retries=1, retry_delay=2))
         results = collector.collect_many(targets, COMMANDS)
 
         print()
-        for result in sorted(results, key=lambda r: devices[r.host].hostname):
+        collections = []
+        for result in sorted(results, key=lambda r: devices[r.host].hostname or r.host):
             device = devices[result.host]
+            name = device.hostname or result.host
             status = "OK" if result.success else "FEHLER" + (f" ({result.error})" if result.error else "")
-            print(f"{device.hostname:11} {result.host:<14} {status} [{result.duration_s}s]")
+            print(f"{name:11} {result.host:<14} {status} [{result.duration_s}s]")
             for cmd, raw in result.outputs.items():
                 if raw.config:
                     safe_cmd = re.sub(r"\W+", "_", cmd)
-                    device_dir = OUTPUT_DIR / device.hostname
+                    device_dir = OUTPUT_DIR / name
                     device_dir.mkdir(parents=True, exist_ok=True)
                     (device_dir / f"{safe_cmd}.txt").write_text(raw.config, encoding="utf-8")
                 elif raw.error:
                     print(f"   {cmd}: {raw.error}")
-            repo.save_result(device, result)
+            collections.append(repo.save_result(job, device, result))
 
+        repo.finish_job(job, collections)
         session.commit()
-    print(f"\nIn DB gespeichert, Kopie in: {OUTPUT_DIR.resolve()}")
+    print(f"\nJob {job.id} in DB gespeichert ({job.status}), Kopie in: {OUTPUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":
