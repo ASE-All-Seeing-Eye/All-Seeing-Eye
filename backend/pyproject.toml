@@ -8,6 +8,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.142.1",
+    "netmiko>=4.8.0",
     "ollama>=0.6.3",
     "psycopg[binary]>=3.3.5",
     "pydantic>=2.13.5",
