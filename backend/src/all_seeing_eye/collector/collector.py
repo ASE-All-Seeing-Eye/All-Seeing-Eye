@@ -10,10 +10,7 @@ from netmiko import ConnectHandler
 from netmiko.exceptions import (NetmikoAuthenticationException,
                                 NetmikoTimeoutException)
 
-try:
-    from backend.src.all_seeing_eye.collector.models import Device, RawConfig
-except ImportError:
-    from models import Device, RawConfig
+from .models import RawConfig, SSHTarget
 
 logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("collector.audit")
@@ -41,7 +38,7 @@ class ConnectionSettings:
     allow_telnet: bool = False
 
 
-def open_connection(device: Device, settings: ConnectionSettings | None = None):
+def open_connection(device: SSHTarget, settings: ConnectionSettings | None = None):
     """Öffnet eine SSH-Verbindung (Telnet nur mit allow_telnet=True) und gibt das Netmiko-Objekt zurück."""
     settings = settings or ConnectionSettings()
 
@@ -183,7 +180,7 @@ class ConfigCollector:
                           datetime.now(timezone.utc).isoformat(), host, command, status)
 
 
-    def collect_device(self, device: Device,
+    def collect_device(self, device: SSHTarget,
                        commands: tuple[str, ...] | list[str] | dict | None = None) -> CollectionResult:
         """commands: None = Standardbefehle des Herstellers, Liste = für dieses Gerät,
         Dictionary = Befehle je Hersteller, z. B. {"cisco": [...], "fortinet": [...]}."""
@@ -270,7 +267,7 @@ class ConfigCollector:
                     result.prompt = f"{result.hostname}{suffix}"
                     return
 
-    def collect_many(self, devices: list[Device],
+    def collect_many(self, devices: list[SSHTarget],
                      commands: tuple[str, ...] | list[str] | dict | None = None) -> list[CollectionResult]:
         """Mehrere Geräte parallel abfragen."""
         results = []
@@ -280,20 +277,20 @@ class ConfigCollector:
                 results.append(future.result())
         return results
 
-    def send_command(self, device: Device, command: str) -> RawConfig:
+    def send_command(self, device: SSHTarget, command: str) -> RawConfig:
         result = self.collect_device(device, [command])
         if result.error:
             return RawConfig(host=device.host, error=result.error)
         return result.outputs[command]
 
-    def get_prompt(self, device: Device) -> str:
+    def get_prompt(self, device: SSHTarget) -> str:
         return self.collect_device(device, ["show version"]).prompt or ""
 
-    def get_config(self, device: Device) -> RawConfig:
+    def get_config(self, device: SSHTarget) -> RawConfig:
         return self.send_command(device, "show running-config")
 
-    def get_cdp_neighbors(self, device: Device) -> RawConfig:
+    def get_cdp_neighbors(self, device: SSHTarget) -> RawConfig:
         return self.send_command(device, "show cdp neighbors")
 
-    def get_version(self, device: Device) -> RawConfig:
+    def get_version(self, device: SSHTarget) -> RawConfig:
         return self.send_command(device, "show version")
