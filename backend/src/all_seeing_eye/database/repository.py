@@ -119,7 +119,7 @@ def get_findings_of_device(device_id: int) -> list[dict]:
         )
         return [f.to_dict() for f in session.scalars(statement).all()]
 
-def log_event(actor: str, action: str, object_type: str, object_id: int | None, result: str, message: str | None) -> None:
+def log_event(actor: str, action: str, object_type: str, object_id: int | None, result: str, message: str | None = None) -> None:
     with SessionFactory() as session:
         log = AuditLog(actor=actor, action=action, object_type=object_type, object_id=object_id, result=result, message=message)
         session.add(log)
