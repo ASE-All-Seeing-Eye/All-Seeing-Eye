@@ -1,38 +1,48 @@
+"""Liest die vier GNS3-Router (und die FortiGate) aus und speichert die Ausgaben.
 
+Zwei Modi (siehe USE_CONSOLE):
+  True  = nur Router nötig: Telnet über die GNS3-Console (nur fürs Lab)
+  False = SSH über die Management-IP (braucht Cloud + Switch; nur hier wird auch die FortiGate abgefragt)
+
+Start (im Ordner mit collector.py und models.py):
+    python "Run gns3.py"
+"""
 import logging
 import re
 from pathlib import Path
 
 try:
-    from backend.src.all_seeing_eye.collector import ConfigCollector, ConnectionSettings
-    from backend.src.all_seeing_eye.collector.models import Device
-except ImportError:
+    from .collector import ConfigCollector, ConnectionSettings
+    from .models import Device
+except ImportError:  # direkt aus dem Ordner gestartet
     from collector import ConfigCollector, ConnectionSettings
     from models import Device
 
-
+# ---- An deine Konfiguration anpassen ----
 USE_CONSOLE = False
 
+# Modus Console: GNS3-VM und Console-Ports (rechts in "Topology Summary")
+GNS3_VM = "10.40.1.192"
+CONSOLE_PORTS = {"R1": 5006, "R2": 5003, "R3": 5005, "R4": 5009}
 
-GNS3_VM = "192.168.83.128"
-CONSOLE_PORTS = {"Router1": 5005, "Router2": 5024, "Router3": 5001, "Router4": 5003}
+# Modus SSH: Management-IPs und Zugangsdaten
+SSH_IPS = {"R1": "10.40.1.194", "R2": "10.40.1.195",
+           "R3": "10.40.1.196", "R4": "10.40.1.197"}
+USERNAME = "automation"
+PASSWORD = "Gns3Lab2026"   # Lab-Passwort, nicht ins Repository committen
 
+SECRET = ""   # kein Enable-Secret nötig (Benutzer hat privilege 15)
 
-SSH_IPS = {"Router1": "192.168.83.11", "Router2": "192.168.83.12",
-           "Router3": "192.168.83.13", "Router4": "192.168.83.14"}
-USERNAME = "admin"
-PASSWORD = "cisco123"
-
-SECRET = "cisco123"
-
-
-FORTIGATES = {"FortiGate1": "192.168.83.20"}
+# FortiGate (nur im SSH-Modus): Management-IP und Zugangsdaten
+FORTIGATES = {"FortiGate-1": "10.40.1.198"}
 FORTIGATE_USER = "admin"
 FORTIGATE_PASSWORD = "admin"
 
-OUTPUT_DIR = Path("../gns3_output")
+OUTPUT_DIR = Path("gns3_output")
 
-
+# Diese Befehle werden je Hersteller ausgeführt (nur Befehle aus der Whitelist
+# im Collector sind erlaubt). Über die Console dauert jeder Befehl ein paar Sekunden,
+# nicht benötigte Zeilen einfach auskommentieren.
 CISCO_COMMANDS = [
     "show running-config",
     "show startup-config",
@@ -53,7 +63,7 @@ CISCO_COMMANDS = [
 ]
 FORTINET_COMMANDS = [
     "get system status",
-    "show",
+    "show",                              # Konfiguration (nur Abweichungen vom Standard)
     "get system interface physical",
     "get router info routing-table all",
     "get router info ospf neighbor",
