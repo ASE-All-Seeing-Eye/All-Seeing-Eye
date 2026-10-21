@@ -6,7 +6,8 @@ from sqlalchemy.dialects.postgresql import INET, ARRAY, JSONB
 from sqlalchemy import Integer, func, UniqueConstraint
 
 class Base(DeclarativeBase):
-    pass
+    def to_dict(self) -> dict:
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
 class Job(Base):
     __tablename__ = "job"
@@ -209,4 +210,3 @@ class AuditLog(Base):
 if __name__ == "__main__":
     from all_seeing_eye.database.session import engine
     Base.metadata.create_all(engine)
-    
