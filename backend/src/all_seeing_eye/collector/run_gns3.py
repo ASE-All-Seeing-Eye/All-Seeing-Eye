@@ -1,48 +1,40 @@
-"""Liest die vier GNS3-Router (und die FortiGate) aus und speichert die Ausgaben.
+"""Liest alle Geräte aus der Datenbank aus und speichert die Ausgaben als Configuration.
 
-Zwei Modi (siehe USE_CONSOLE):
-  True  = nur Router nötig: Telnet über die GNS3-Console (nur fürs Lab)
-  False = SSH über die Management-IP (braucht Cloud + Switch; nur hier wird auch die FortiGate abgefragt)
-
-Start (im Ordner mit collector.py und models.py):
-    python "Run gns3.py"
+Start (im Ordner backend):
+    uv run python -m all_seeing_eye.collector.run_gns3
 """
 import logging
 import re
 from pathlib import Path
 
-try:
-    from .collector import ConfigCollector, ConnectionSettings
-    from .models import Device
-except ImportError:  # direkt aus dem Ordner gestartet
-    from collector import ConfigCollector, ConnectionSettings
-    from models import Device
+from sqlalchemy import select
+
+from all_seeing_eye.database.models import Device
+from all_seeing_eye.database.session import SessionFactory
+
+from .collector import ConfigCollector, ConnectionSettings
+from .models import Credentials
+from .repository import CollectionRepository, to_target, vendor_key
 
 # ---- An deine Konfiguration anpassen ----
-USE_CONSOLE = False
+CREDENTIALS = {   # Lab-Passwörter, nicht ins Repository committen
+    "cisco": Credentials("automation", "Gns3Lab2026"),
+    "fortinet": Credentials("admin", "admin"),
+}
 
-# Modus Console: GNS3-VM und Console-Ports (rechts in "Topology Summary")
-GNS3_VM = "10.40.1.192"
-CONSOLE_PORTS = {"R1": 5006, "R2": 5003, "R3": 5005, "R4": 5009}
+# Nur nötig, solange der Scanner die Geräte noch nicht in die DB schreibt
+LAB_DEVICES = [
+    ("R1", "cisco", "10.40.1.194"),
+    ("R2", "cisco", "10.40.1.195"),
+    ("R3", "cisco", "10.40.1.196"),
+    ("R4", "cisco", "10.40.1.197"),
+    ("FortiGate-1", "fortinet", "10.40.1.198"),
+]
 
-# Modus SSH: Management-IPs und Zugangsdaten
-SSH_IPS = {"R1": "10.40.1.194", "R2": "10.40.1.195",
-           "R3": "10.40.1.196", "R4": "10.40.1.197"}
-USERNAME = "automation"
-PASSWORD = "Gns3Lab2026"   # Lab-Passwort, nicht ins Repository committen
-
-SECRET = ""   # kein Enable-Secret nötig (Benutzer hat privilege 15)
-
-# FortiGate (nur im SSH-Modus): Management-IP und Zugangsdaten
-FORTIGATES = {"FortiGate-1": "10.40.1.198"}
-FORTIGATE_USER = "admin"
-FORTIGATE_PASSWORD = "admin"
-
-OUTPUT_DIR = Path("gns3_output")
+OUTPUT_DIR = Path("gns3_output")   # zusätzlich als .txt, zum Nachschauen
 
 # Diese Befehle werden je Hersteller ausgeführt (nur Befehle aus der Whitelist
-# im Collector sind erlaubt). Über die Console dauert jeder Befehl ein paar Sekunden,
-# nicht benötigte Zeilen einfach auskommentieren.
+# im Collector sind erlaubt), nicht benötigte Zeilen einfach auskommentieren.
 CISCO_COMMANDS = [
     "show running-config",
     "show startup-config",
@@ -75,45 +67,43 @@ COMMANDS = {"cisco": CISCO_COMMANDS, "fortinet": FORTINET_COMMANDS}
 # -----------------------------------------
 
 
-def build_devices() -> dict[tuple[str, int], tuple[str, Device]]:
-    """Gibt {(host, port): (name, Device)} zurück."""
-    devices = {}
-    for name in CONSOLE_PORTS:
-        if USE_CONSOLE:
-            dev = Device("cisco_ios_telnet", GNS3_VM, None, None, SECRET, CONSOLE_PORTS[name])
-        else:
-            dev = Device("cisco_ios", SSH_IPS[name], USERNAME, PASSWORD, SECRET)
-        devices[(dev.host, dev.port)] = (name, dev)
-    if not USE_CONSOLE:
-        for name, ip in FORTIGATES.items():
-            dev = Device("fortinet", ip, FORTIGATE_USER, FORTIGATE_PASSWORD)
-            devices[(dev.host, dev.port)] = (name, dev)
-    return devices
+def seed_lab_devices(session) -> None:
+    known = {str(ip) for ip in session.scalars(select(Device.management_ip))}
+    for name, vendor, ip in LAB_DEVICES:
+        if ip not in known:
+            session.add(Device(hostname=name, vendor=vendor, os_version="", management_ip=ip))
+    session.flush()
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
-    devices = build_devices()
-    settings = ConnectionSettings(retries=1, retry_delay=2, allow_telnet=USE_CONSOLE)
-    collector = ConfigCollector(settings=settings)
-    results = collector.collect_many([dev for _, dev in devices.values()], COMMANDS)
+    with SessionFactory() as session:
+        seed_lab_devices(session)
+        repo = CollectionRepository(session)
+        devices = {str(d.management_ip): d for d in repo.devices()}
 
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    print()
-    for result in sorted(results, key=lambda r: devices[(r.host, r.port)][0]):
-        name = devices[(result.host, result.port)][0]
-        status = "OK" if result.success else "FEHLER" + (f" ({result.error})" if result.error else "")
-        print(f"{name:11} {result.host}:{result.port:<6} {result.hostname or '-':10} {status} [{result.duration_s}s]")
-        for cmd, raw in result.outputs.items():
-            if raw.config:
-                safe_cmd = re.sub(r"\W+", "_", cmd)
-                router_dir = OUTPUT_DIR / name
-                router_dir.mkdir(parents=True, exist_ok=True)
-                (router_dir / f"{safe_cmd}.txt").write_text(raw.config, encoding="utf-8")
-            elif raw.error:
-                print(f"   {cmd}: {raw.error}")
-    print(f"\nAusgaben gespeichert in: {OUTPUT_DIR.resolve()}")
+        targets = [to_target(d, CREDENTIALS[vendor_key(d.vendor)]) for d in devices.values()]
+        collector = ConfigCollector(settings=ConnectionSettings(retries=1, retry_delay=2))
+        results = collector.collect_many(targets, COMMANDS)
+
+        print()
+        for result in sorted(results, key=lambda r: devices[r.host].hostname):
+            device = devices[result.host]
+            status = "OK" if result.success else "FEHLER" + (f" ({result.error})" if result.error else "")
+            print(f"{device.hostname:11} {result.host:<14} {status} [{result.duration_s}s]")
+            for cmd, raw in result.outputs.items():
+                if raw.config:
+                    safe_cmd = re.sub(r"\W+", "_", cmd)
+                    device_dir = OUTPUT_DIR / device.hostname
+                    device_dir.mkdir(parents=True, exist_ok=True)
+                    (device_dir / f"{safe_cmd}.txt").write_text(raw.config, encoding="utf-8")
+                elif raw.error:
+                    print(f"   {cmd}: {raw.error}")
+            repo.save_result(device, result)
+
+        session.commit()
+    print(f"\nIn DB gespeichert, Kopie in: {OUTPUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":
