@@ -29,32 +29,77 @@ def demo_rule(code, title, category, severity, vendor, check_type, check_value, 
 
 
 DEMO_RULES = [
-    # werden von Ollama geprüft
-    demo_rule("LLM-01", "Standard-Administratorkonto", "Authentifizierung", "MEDIUM", "all", "llm",
-              "Ein Benutzerkonto heißt genau 'admin' (z. B. Zeile 'username admin ...' "
-              "oder 'edit \"admin\"' unter config system admin)",
-              "Eigenes, personalisiertes Admin-Konto anlegen und 'admin' deaktivieren"),
-    demo_rule("LLM-02", "Unverschlüsselte Verwaltung (Telnet/HTTP)", "Management", "HIGH", "all", "llm",
+    # ---- werden von Ollama geprüft ----
+    demo_rule("LLM-01", "Unverschlüsselte Verwaltung (Telnet/HTTP)", "Management", "HIGH", "all", "llm",
               "Telnet oder HTTP ohne s ist als Verwaltungszugang erlaubt (z. B. 'transport input telnet', "
               "'ip http server', 'set allowaccess ... http' oder '... telnet')",
               "Nur SSH und HTTPS für die Verwaltung erlauben"),
-    demo_rule("LLM-03", "SNMP mit Standard-Community", "Management", "CRITICAL", "all", "llm",
+    demo_rule("LLM-02", "SNMP mit Standard-Community", "Management", "CRITICAL", "all", "llm",
               "SNMP-Community heißt 'public' oder 'private'",
               "Eigene Community bzw. SNMPv3 verwenden"),
-    # werden direkt in Python geprüft
-    demo_rule("RGX-01", "Kein externer Syslog-Server", "Logging", "MEDIUM", "all", "not_regex",
+
+    # ---- werden direkt in Python geprüft: alle Hersteller ----
+    demo_rule("GEN-01", "Standard-Administratorkonto 'admin'", "Authentifizierung", "MEDIUM", "all", "regex",
+              r'^username admin\b|(?<=config system admin\n)\s*edit "admin"',
+              "Personalisierte Admin-Konten anlegen und 'admin' deaktivieren"),
+    demo_rule("GEN-02", "Kein externer Syslog-Server", "Logging", "MEDIUM", "all", "not_regex",
               r"^logging host|config log syslogd setting",
               "Logs an einen zentralen Syslog-Server senden"),
-    demo_rule("RGX-02", "Kein Login-Banner", "Management", "LOW", "all", "not_regex",
+    demo_rule("GEN-03", "Kein Login-Banner", "Management", "LOW", "all", "not_regex",
               r"^banner (login|motd)|set pre-login-banner enable",
               "Login-Banner mit rechtlichem Hinweis konfigurieren"),
+
+    # ---- Cisco IOS ----
+    demo_rule("CIS-01", "Passwörter im Klartext oder mit Typ 7", "Authentifizierung", "HIGH", "cisco", "regex",
+              r"^enable password|^username \S+ .*password (0|7) ",
+              "'enable secret' bzw. 'username ... secret' (Typ 8/9) verwenden"),
+    demo_rule("CIS-02", "Keine Passwort-Verschlüsselung (service password-encryption)", "Authentifizierung",
+              "LOW", "cisco", "not_regex", r"^service password-encryption",
+              "'service password-encryption' aktivieren"),
+    demo_rule("CIS-03", "Kein AAA (zentrale Authentifizierung)", "Authentifizierung", "MEDIUM", "cisco",
+              "regex", r"^no aaa new-model",
+              "AAA aktivieren und Anmeldung über RADIUS/TACACS+ führen"),
+    demo_rule("CIS-04", "Kein Schutz gegen Brute-Force-Anmeldungen", "Authentifizierung", "MEDIUM", "cisco",
+              "not_regex", r"^login block-for",
+              "'login block-for ... attempts ... within ...' konfigurieren"),
+    demo_rule("CIS-05", "VTY-Zugriff nicht per ACL eingeschränkt", "Management", "MEDIUM", "cisco",
+              "not_regex", r"^\s*access-class \S+ in",
+              "Auf den VTY-Leitungen eine 'access-class' mit erlaubten Management-IPs setzen"),
+    demo_rule("CIS-06", "Kein NTP-Server", "Logging", "LOW", "cisco", "not_regex", r"^ntp server",
+              "NTP-Server konfigurieren, damit Logs korrekte Zeitstempel haben"),
+    demo_rule("CIS-07", "SSH Version 1 erlaubt", "Protokolle", "HIGH", "cisco", "not_regex", r"^ip ssh version 2",
+              "'ip ssh version 2' setzen"),
+    demo_rule("CIS-08", "Kein Session-Timeout", "Management", "MEDIUM", "cisco", "regex", r"exec-timeout 0( 0)?$",
+              "'exec-timeout 10 0' oder kürzer setzen"),
+    demo_rule("CIS-09", "CDP aktiv (verrät Geräteinformationen)", "Protokolle", "LOW", "cisco", "regex",
+              r"^Device ID|Total cdp entries displayed",
+              "CDP auf Interfaces zu nicht vertrauenswürdigen Netzen deaktivieren"),
+
+    # ---- FortiGate ----
+    demo_rule("FGT-01", "Admin-Zugriff nicht auf vertrauenswürdige Hosts beschränkt", "Management", "MEDIUM",
+              "fortinet", "not_regex", r"set trusthost\d",
+              "Beim Admin-Konto 'set trusthost1 <Management-Netz>' setzen"),
+    demo_rule("FGT-02", "Keine Passwort-Richtlinie für Admins", "Authentifizierung", "MEDIUM", "fortinet",
+              "not_regex", r"config system password-policy\s*\n(\s+set .*\n)*?\s+set status enable",
+              "'config system password-policy' mit Mindestlänge und Komplexität aktivieren"),
+    demo_rule("FGT-03", "Lokales Gastkonto vorhanden", "Authentifizierung", "LOW", "fortinet", "regex",
+              r'^\s*edit "guest"$', "Nicht benötigte lokale Konten entfernen"),
+    demo_rule("FGT-04", "Sicherheits-Signaturen nie aktualisiert", "Updates", "HIGH", "fortinet", "regex",
+              r"^Virus-DB: 1\.00000",
+              "FortiGuard-Updates aktivieren und Signaturen (AV, IPS) aktualisieren"),
 ]
+
+
+# Die eigentliche Konfiguration kommt zuerst, wie beim Collector. Steht sie mitten zwischen
+# den anderen Ausgaben, übersieht llama3.1:8b darin deutlich mehr.
+CONFIG_FILES = ("show_running_config", "show")
 
 
 def read_outputs(folder: Path) -> list[tuple[str, str]]:
     """gns3_output/<Gerät>/show_running_config.txt -> ("show running config", Inhalt)"""
+    files = sorted(folder.glob("*.txt"), key=lambda f: (f.stem not in CONFIG_FILES, f.stem))
     return [(f.stem.replace("_", " "), f.read_text(encoding="utf-8").strip())
-            for f in sorted(folder.glob("*.txt")) if f.read_text(encoding="utf-8").strip()]
+            for f in files if f.read_text(encoding="utf-8").strip()]
 
 
 def main() -> None:
@@ -104,12 +149,10 @@ def analyze_folder(folder: Path) -> analyzer.Assessment:
     print(f"1) {len(sections)} Befehlsausgaben gelesen ({sum(len(o) for _, o in sections):,} Zeichen)")
 
     raw_content = "\n".join(f"### {name}\n{output}\n" for name, output in sections)
-    llm_sections = [(n, o) for n, o in sections if n.lower() not in analyzer.SKIP_SECTIONS]
-    if vendor == "fortinet":
-        llm_sections = [(n, analyzer.trim_fortinet_config(o) if n == "show" else o) for n, o in llm_sections]
-    secrets = sum(len(analyzer._SECRET_PATTERN.findall(o)) for _, o in llm_sections)
-    chunks = analyzer.chunk_sections([(n, analyzer.redact(o)) for n, o in llm_sections])
-    print(f"2) {secrets} Passwörter/Hashes geschwärzt, {sum(len(c) for c in chunks):,} Zeichen gehen an das LLM")
+    chunks = analyzer.prepare_llm_chunks(sections, vendor)
+    secrets = sum(c.count("<entfernt>") for c in chunks)
+    print(f"2) Nur die Konfiguration geht an das LLM: {sum(len(c) for c in chunks):,} Zeichen, "
+          f"{secrets} Passwörter/Hashes geschwärzt")
 
     rules = [r for r in DEMO_RULES if analyzer.rule_applies(r, vendor)]
     local_rules = [r for r in rules if r.check_type in analyzer.LOCAL_CHECKS]
