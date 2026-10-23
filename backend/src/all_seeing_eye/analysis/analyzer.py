@@ -212,8 +212,10 @@ def check_rules(content: str, rules: list[SecurityRule]) -> list[DetectedFinding
 def ask_llm(messages: list[dict]) -> str:
     """Schickt eine Anfrage an Ollama und gibt den rohen Antworttext zurück."""
     client = Client(host=settings.ollama_host, timeout=settings.ollama_timeout)
+    # think=False: Modelle wie qwen3.5 schreiben sonst erst lange Überlegungen (im Test 43 s statt 1 s
+    # für eine Mini-Antwort), Modelle ohne Denkmodus wie llama3.1 ignorieren es
     response = client.chat(model=settings.ollama_model, messages=messages, format=RuleCheck.model_json_schema(),
-                           options={"temperature": 0, "num_ctx": NUM_CTX})
+                           options={"temperature": 0, "num_ctx": NUM_CTX}, think=False)
     return response.message.content
 
 
