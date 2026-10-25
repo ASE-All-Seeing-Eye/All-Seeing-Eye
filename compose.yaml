@@ -45,6 +45,9 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
+    configs:
+      - source: pgadmin_servers
+        target: /pgadmin4/servers.json
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
@@ -79,7 +82,24 @@ services:
     depends_on:
       - ollama
     logging: *default-logging
-    
+
+configs:
+  pgadmin_servers:
+    content: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "All Seeing Eye",
+            "Group": "Servers",
+            "Host": "db",
+            "Port": 5432,
+            "MaintenanceDB": "${POSTGRES_DB}",
+            "Username": "${POSTGRES_USER}",
+            "SSLMode": "prefer"
+          }
+        }
+      }
+
 volumes:
   postgres_data:
   pgadmin_data:
