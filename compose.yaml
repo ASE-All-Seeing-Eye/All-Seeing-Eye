@@ -22,7 +22,7 @@ services:
       retries: 3
       start_period: 20s
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     logging: *default-logging
 
   db:
@@ -40,7 +40,7 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     logging: *default-logging
 
   pgadmin:
@@ -52,7 +52,7 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - db
     logging: *default-logging
@@ -63,7 +63,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     logging: *default-logging
 
   open-webui:
@@ -75,7 +75,7 @@ services:
     volumes:
       - open-webui_data:/app/backend/data
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
     depends_on:
       - ollama
     logging: *default-logging
