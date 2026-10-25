@@ -75,6 +75,7 @@ services:
     environment:
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
       OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_AUTH: "False"
     volumes:
       - open-webui_data:/app/backend/data
     ports:
