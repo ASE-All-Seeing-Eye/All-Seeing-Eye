@@ -13,6 +13,11 @@ def create_job(target: str) -> int:
     log_event("dashboard", "job_created", "job", job.id, "ok")
     return job.id
 
+def get_next_pending_job() -> int | None:
+    with SessionFactory() as session:
+        job = session.scalar(select(Job).where(Job.status == "pending").order_by(Job.created_at).limit(1))
+        return job.id if job else None
+
 def set_job_status(job_id: int, status: str, error: str | None = None) -> None:
     if status not in JOB_STATUSES:
         raise ValueError(f"Ungültiger Status: {status}")
@@ -67,9 +72,14 @@ def create_or_update_device(management_ip: str, hostname: str | None = None,
         session.commit()
         return device.id
 
-def get_device(management_ip: str) -> dict | None:
+def get_device_by_management_ip(management_ip: str) -> dict | None:
     with SessionFactory() as session:
         device = session.scalar(select(Device).where(Device.management_ip == management_ip))
+        return device.to_dict() if device else None
+
+def get_device(device_id: int) -> dict | None:
+    with SessionFactory() as session:
+        device = session.get(Device, device_id)
         return device.to_dict() if device else None
 
 def list_devices() -> list[dict]:
@@ -213,6 +223,11 @@ def create_collection(device_id: int, job_id: int) -> int:
         session.commit()
         return collection.id
 
+def get_collection(collection_id: int) -> dict | None:
+    with SessionFactory() as session:
+        collection = session.get(Collection, collection_id)
+        return collection.to_dict() if collection else None
+
 def finish_collection(collection_id: int, status: str, error: str | None = None) -> None:
     if status not in {"ok", "partial", "failed"}:
         raise ValueError(f"Ungültiger Status: {status}")
@@ -281,6 +296,9 @@ def get_commands_of_collection(collection_id: int) -> list[dict]:
         return [command.to_dict() for command in session.scalars(statement).all()]
 
 def create_analysis(collection_id: int, method: str, ai_model: str | None = None) -> int:
+    if method not in {"rule", "llm", "both"}:
+        raise ValueError(f"Ungültige Methode: {method}")
+    
     with SessionFactory() as session:
         analysis = Analysis(collection_id=collection_id, method=method, ai_model=ai_model, status="running")
         session.add(analysis)
