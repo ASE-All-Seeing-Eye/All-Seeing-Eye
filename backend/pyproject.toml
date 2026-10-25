@@ -11,6 +11,7 @@ dependencies = [
     "netmiko>=4.8.0",
     "ollama>=0.6.3",
     "psycopg[binary]>=3.3.5",
+    "pyats[library]>=26.9 ; sys_platform != 'win32'",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "sqlalchemy>=2.0.52",
