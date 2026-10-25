@@ -7,12 +7,12 @@
     "created_at": "2026-10-21T15:21:02.160411+00:00",
     "summary_model": "llama3.1:8b",
     "statistics": {
-      "finding_count": 1,
+      "finding_count": 2,
       "by_severity": {
         "CRITICAL": 0,
         "HIGH": 1,
         "MEDIUM": 0,
-        "LOW": 0
+        "LOW": 1
       }
     },
     "summary": "Ein Sicherheitsbericht für das System wurde erstellt. Das wichtigste Problem ist die Aktivierung von Telnet, was zu einer hohen Sicherheitsgefahr führt. Die empfohlene Maßnahme ist die Deaktivierung von Telnet und die Verwendung von SSH. Es wurden keine anderen Probleme gefunden.",
@@ -30,6 +30,21 @@
         "recommendation": "Telnet deaktivieren und SSH verwenden.",
         "evidence": {
           "telnet_enabled": true
+        }
+      },
+      {
+        "id": 2,
+        "analysis_id": 42,
+        "rule_id": 4,
+        "detected_by": "rule",
+        "title": "Login-Banner nicht konfiguriert",
+        "category": "Management",
+        "severity": "LOW",
+        "description": "Für den administrativen Zugriff ist kein Login-Banner konfiguriert.",
+        "reason": "Ein fehlender Login-Banner bedeutet, dass Benutzer vor dem Zugriff nicht über die Nutzung des Systems und mögliche Zugriffsbedingungen informiert werden.",
+        "recommendation": "Einen Login-Banner konfigurieren, der auf die autorisierte Nutzung des Systems hinweist.",
+        "evidence": {
+          "login_banner_configured": false
         }
       }
     ]
