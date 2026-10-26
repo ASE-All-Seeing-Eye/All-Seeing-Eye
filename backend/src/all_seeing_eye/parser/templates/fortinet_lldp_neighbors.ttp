@@ -1,0 +1,6 @@
+<group name="neighbors*">
+lldprx.neighbor.{{ id | DIGIT }}.port.txt: {{ local_interface }}
+lldprx.neighbor.{{ id | DIGIT }}.port.id.data: {{ remote_interface }}
+lldprx.neighbor.{{ id | DIGIT }}.system.name.data: {{ remote_hostname | ORPHRASE }}
+lldprx.neighbor.{{ id | DIGIT }}.address.{{ ignore }}.addr: {{ remote_ip | IP }}
+</group>

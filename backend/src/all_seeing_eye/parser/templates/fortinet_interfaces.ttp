@@ -1,0 +1,8 @@
+<group name="interfaces*">
+    edit "{{ name }}"
+        set ip {{ ip_address | IP }} {{ mask | IP}}
+        set status {{ status }}
+        set description "{{ description | ORPHRASE }}"
+        set vlanid {{ vlan | to_int }}
+    next {{ _end_ }}
+</group>

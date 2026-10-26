@@ -1,0 +1,4 @@
+<group name="interfaces*">
+==[{{ name }}]
+status: {{ status }}
+</group>

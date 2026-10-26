@@ -44,6 +44,9 @@ def normalize_mac(mac: str | None) -> str | None:
         return None
     return ":".join(digits[i:i + 2] for i in range(0, 12, 2))
 
+def to_prefix(ip_address: str, mask: str) -> str:
+    return str(ipaddress.ip_interface(f"{ip_address}/{mask}"))
+
 def detect_os_type(show_version: str | None) -> str | None:
     if not show_version:
         return None

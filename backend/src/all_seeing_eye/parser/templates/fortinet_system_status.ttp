@@ -1,0 +1,2 @@
+Version: {{ version_line | ORPHRASE }}
+Hostname: {{ hostname }}

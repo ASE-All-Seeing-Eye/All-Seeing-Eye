@@ -87,7 +87,7 @@ class CiscoParser(Parser):
                 local_interface=normalize_interface_name(entry["local_interface"]),
                 method="cdp",
                 remote_hostname=normalize_hostname(entry.get("device_id")),
-                remote_interface=normalize_interface_name(entry["port_id"]) if entry.get("port_id") else None,
+                remote_interface=entry["port_id"] if entry.get("port_id") else None,
                 remote_ip=next(iter(addresses), None)
             ))
         output = commands.get("show lldp neighbors detail")
@@ -99,7 +99,7 @@ class CiscoParser(Parser):
                         local_interface=normalize_interface_name(local_name),
                         method="lldp",
                         remote_hostname=normalize_hostname(neighbor.get("system_name") or remote_name),
-                        remote_interface=normalize_interface_name(remote_port),
+                        remote_interface=remote_port,
                         remote_ip=neighbor.get("management_address")
                     ))
         if not commands.get("show cdp neighbors detail") and not commands.get("show lldp neighbors detail"):
