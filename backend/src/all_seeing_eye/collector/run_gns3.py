@@ -12,16 +12,14 @@ from sqlalchemy import select
 
 from all_seeing_eye.database.models import Device
 from all_seeing_eye.database.session import SessionFactory
+from all_seeing_eye.settings import settings
 
 from .collector import ConfigCollector, ConnectionSettings
 from .models import Credentials
 from .repository import CollectionRepository, to_target, vendor_key
 
 # ---- An deine Konfiguration anpassen ----
-CREDENTIALS = {   # Lab-Passwörter, nicht ins Repository committen
-    "cisco": Credentials("automation", "Gns3Lab2026"),
-    "fortinet": Credentials("admin", "admin"),
-}
+# Die SSH-Zugangsdaten stehen in backend/.env (CISCO_SSH_USERNAME, CISCO_SSH_PASSWORD, ...)
 
 # Nur nötig, solange der Scanner die Geräte noch nicht in die DB schreibt
 LAB_DEVICES = [
@@ -68,6 +66,20 @@ COMMANDS = {"cisco": CISCO_COMMANDS, "fortinet": FORTINET_COMMANDS}
 # -----------------------------------------
 
 
+def load_credentials() -> dict[str, Credentials]:
+    """SSH-Zugangsdaten je Hersteller aus der .env, bricht mit klarer Meldung ab, wenn etwas fehlt."""
+    missing = [name for name in ("cisco_ssh_username", "cisco_ssh_password",
+                                 "fortinet_ssh_username", "fortinet_ssh_password")
+               if not getattr(settings, name)]
+    if missing:
+        raise SystemExit(f"In backend/.env fehlt: {', '.join(n.upper() for n in missing)}")
+    return {
+        "cisco": Credentials(settings.cisco_ssh_username, settings.cisco_ssh_password,
+                             settings.cisco_ssh_secret or None),
+        "fortinet": Credentials(settings.fortinet_ssh_username, settings.fortinet_ssh_password),
+    }
+
+
 def seed_lab_devices(session) -> None:
     known = {str(ip) for ip in session.scalars(select(Device.management_ip))}
     for name, vendor, ip in LAB_DEVICES:
@@ -78,6 +90,7 @@ def seed_lab_devices(session) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    credentials = load_credentials()
 
     with SessionFactory() as session:
         seed_lab_devices(session)
@@ -85,7 +98,7 @@ def main() -> None:
         devices = {str(d.management_ip): d for d in repo.devices()}
         job = repo.create_job(target="GNS3-Lab")
 
-        targets = [to_target(d, CREDENTIALS[vendor_key(d.vendor)]) for d in devices.values()]
+        targets = [to_target(d, credentials[vendor_key(d.vendor)]) for d in devices.values()]
         collector = ConfigCollector(settings=ConnectionSettings(retries=1, retry_delay=2))
         results = collector.collect_many(targets, COMMANDS)
 
