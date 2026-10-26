@@ -1,4 +1,30 @@
+x-logging: &default-logging
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
+  all-seeing-eye:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "uv", "run", "--no-sync", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    ports:
+      - "127.0.0.1:8000:8000"
+    logging: *default-logging
+
   db:
     image: postgres:16
     restart: unless-stopped
@@ -8,11 +34,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+    logging: *default-logging
 
   pgadmin:
     image: dpage/pgadmin4
+    configs:
+      - source: pgadmin_servers
+        target: /pgadmin4/servers.json
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
@@ -20,9 +55,10 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - db
+    logging: *default-logging
 
   ollama:
     image: ollama/ollama:latest
@@ -30,20 +66,41 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
+    logging: *default-logging
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     restart: unless-stopped
     environment:
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_AUTH: "False"
     volumes:
       - open-webui_data:/app/backend/data
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
     depends_on:
       - ollama
-    
+    logging: *default-logging
+
+configs:
+  pgadmin_servers:
+    content: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "All Seeing Eye",
+            "Group": "Servers",
+            "Host": "db",
+            "Port": 5432,
+            "MaintenanceDB": "${POSTGRES_DB}",
+            "Username": "${POSTGRES_USER}",
+            "SSLMode": "prefer"
+          }
+        }
+      }
+
 volumes:
   postgres_data:
   pgadmin_data:

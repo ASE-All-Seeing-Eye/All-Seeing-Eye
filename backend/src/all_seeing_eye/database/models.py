@@ -66,6 +66,7 @@ class Device(Base):
 
 class Interface(Base):
     __tablename__ = "interface"
+    __table_args__ = (UniqueConstraint("device_id", "name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     device_id: Mapped[int] = mapped_column(ForeignKey("device.id"))
