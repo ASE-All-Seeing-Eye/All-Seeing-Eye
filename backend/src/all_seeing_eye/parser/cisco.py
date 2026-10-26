@@ -4,6 +4,7 @@ from genie.utils.config import Config
 
 from all_seeing_eye.parser.base import Parser
 from all_seeing_eye.parser.models import ParsedDevice, ParsedInterface, ParsedNeighbor
+from all_seeing_eye.parser.normalize import normalize_interface_name, normalize_hostname, normalize_mac
 
 GENIE_OS = {"ios": "ios", "ios_xe": "iosxe", "nx_os": "nxos"}
 REQUIRED_DEVICE_FIELDS = {"hostname", "model", "os_version"}
@@ -27,15 +28,15 @@ class CiscoParser(Parser):
     def parse_device(self, commands: dict[str, str]) -> tuple[ParsedDevice, list[str]]:
         errors: list[str] = []
         device = ParsedDevice(vendor="cisco", os_type=self.os_type)
-        parsed = self.parse(commands, "show version", errors)
+        parsed = self._parse(commands, "show version", errors)
         if parsed and self.os_type == "nx_os":
             hardware = parsed.get("platform", {}).get("hardware", {})
-            device.hostname = hardware.get("device_name")
+            device.hostname = normalize_hostname(hardware.get("device_name"))
             device.model = hardware.get("model")
             device.os_version = parsed.get("platform", {}).get("software", {}).get("system_version")
         elif parsed:
             version = parsed.get("version", {})
-            device.hostname = version.get("hostname")
+            device.hostname = normalize_hostname(version.get("hostname"))
             device.model = version.get("chassis") or version.get("platform")
             device.os_version = version.get("version")
 
@@ -46,20 +47,21 @@ class CiscoParser(Parser):
 
     def parse_interfaces(self, commands: dict[str, str]) -> tuple[list[ParsedInterface], list[str]]:
         errors: list[str] = []
-        parsed = self.parse(commands, "show interfaces", errors)
+        parsed = self._parse(commands, "show interfaces", errors)
         interfaces: dict[str, ParsedInterface] = {}
         for name, data in (parsed or {}).items():
-            interfaces.append(ParsedInterface(
+            name = normalize_interface_name(name)
+            interfaces[name] = ParsedInterface(
                 name=name,
                 description=data.get("description"),
                 ip_address=next(iter(data.get("ipv4", {})), None),
-                mac_address=data.get("mac_address"),
+                mac_address=normalize_mac(data.get("mac_address")),
                 status=data.get("oper_status"),
-            ))
+            )
         output = commands.get("show interfaces switchport")
         switchport = self.parse_command("show interfaces switchport", output) if output else None
         for name, data in (switchport or {}).items():
-            interface = interfaces.get(name)
+            interface = interfaces.get(normalize_interface_name(name))
             if interface is None or not data.get("switchport_enable"):
                 continue
             interface.mode = data.get("operational_mode")
@@ -82,10 +84,10 @@ class CiscoParser(Parser):
                 continue
             addresses = entry.get("management_addresses") or entry.get("entry_addresses") or {}
             neighbors.append(ParsedNeighbor(
-                local_interface=entry["local_interface"],
+                local_interface=normalize_interface_name(entry["local_interface"]),
                 method="cdp",
-                remote_hostname=(entry.get("device_id") or "").split(".")[0] or None,
-                remote_interface=(entry["port_id"]) if entry.get("port_id") else None,
+                remote_hostname=normalize_hostname(entry.get("device_id")),
+                remote_interface=normalize_interface_name(entry["port_id"]) if entry.get("port_id") else None,
                 remote_ip=next(iter(addresses), None)
             ))
         output = commands.get("show lldp neighbors detail")
@@ -94,13 +96,13 @@ class CiscoParser(Parser):
             for remote_port, port in local.get("port_id", {}).items():
                 for remote_name, neighbor in port.get("neighbors", {}).items():
                     neighbors.append(ParsedNeighbor(
-                        local_interface=local_name,
+                        local_interface=normalize_interface_name(local_name),
                         method="lldp",
-                        remote_hostname=(neighbor.get("system_name") or remote_name.split(".")[0]),
-                        remote_interface=remote_port,
+                        remote_hostname=normalize_hostname(neighbor.get("system_name") or remote_name),
+                        remote_interface=normalize_interface_name(remote_port),
                         remote_ip=neighbor.get("management_address")
                     ))
-        if commands.get("show cdp neighbors detail") is None or commands.get("show lldp neighbors detail") is None:
+        if not commands.get("show cdp neighbors detail") and not commands.get("show lldp neighbors detail"):
             errors.append("Keine CDP oder LLDP Ausgabe vorhanden")
         return neighbors, errors
 
