@@ -1,39 +1,33 @@
-"""Gemeinsame Test-Hilfen. Die Tests laufen ohne Postgres und ohne Ollama:
-die Datenbank ist ein SQLite im Speicher, die Postgres-Typen werden dafür umgemappt."""
+"""Die Tests laufen gegen die lokale PostgreSQL-Datenbank aus TEST_DATABASE_URL (backend/.env).
+Jeder Test läuft in einer Transaktion, die danach zurückgerollt wird."""
 import os
+from pathlib import Path
 
-# Muss vor dem ersten Import von all_seeing_eye passieren, sonst wird die echte DB aus der .env benutzt
-os.environ["DATABASE_URL"] = "sqlite://"
+from dotenv import dotenv_values
+
+TEST_DATABASE_URL = dotenv_values(Path(__file__).parents[1] / ".env")["TEST_DATABASE_URL"]
+assert TEST_DATABASE_URL.endswith("_test"), "Nur eine Test-Datenbank verwenden"   # schützt die Team-Datenbank
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 import pytest  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB  # noqa: E402
-from sqlalchemy.ext.compiler import compiles  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
-from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from all_seeing_eye.database.models import (Base, Collection, Command, Configuration,  # noqa: E402
                                             Device, Job, SecurityRule)
 
-
-@compiles(INET, "sqlite")
-def _inet(*_, **__):
-    return "VARCHAR"
-
-
-@compiles(JSONB, "sqlite")
-@compiles(ARRAY, "sqlite")
-def _json(*_, **__):
-    return "JSON"
+engine = create_engine(TEST_DATABASE_URL)
+Base.metadata.drop_all(engine)
+Base.metadata.create_all(engine)
 
 
 @pytest.fixture
 def session():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
-    with Session(engine) as s:
-        yield s
-    engine.dispose()
+    with engine.connect() as conn:
+        transaction = conn.begin()
+        with Session(bind=conn, join_transaction_mode="create_savepoint") as s:
+            yield s
+        transaction.rollback()
 
 
 def make_rule(code, check_type="llm", vendor="all", severity="MEDIUM", check_value="x", title=None):
@@ -45,8 +39,7 @@ def make_rule(code, check_type="llm", vendor="all", severity="MEDIUM", check_val
 def make_collection(session, vendor="cisco", outputs=None, config=None, hostname="R1", ip="10.0.0.1"):
     """Legt Gerät, Job und Collection mit den angegebenen Befehlsausgaben an."""
     device = Device(hostname=hostname, vendor=vendor, management_ip=ip)
-    job = Job(target="Test", status="running")
-    collection = Collection(device=device, job=job, status="ok")
+    collection = Collection(device=device, job=Job(target="Test", status="running"), status="ok")
     for name, output in (outputs or {}).items():
         collection.commands.append(Command(name=name, output=output, parse_status="pending"))
     if config is not None:
