@@ -11,7 +11,7 @@ from .models import Credentials, SSHTarget
 DEVICE_TYPES = {"cisco": "cisco_ios", "fortinet": "fortinet"}
 
 # Dieser Befehl liefert die eigentliche Konfiguration und landet zusätzlich in Configuration
-CONFIG_COMMANDS = {"cisco": "show running-config", "fortinet": "show"}
+CONFIG_COMMANDS = {"cisco": "show running-config", "fortinet": "show full-configuration"}
 
 
 def vendor_key(vendor: str | None) -> str:

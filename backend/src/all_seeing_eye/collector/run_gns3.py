@@ -35,32 +35,20 @@ OUTPUT_DIR = Path("gns3_output")   # zusätzlich als .txt, zum Nachschauen
 # Diese Befehle werden je Hersteller ausgeführt (nur Befehle aus der Whitelist
 # im Collector sind erlaubt), nicht benötigte Zeilen einfach auskommentieren.
 CISCO_COMMANDS = [
-    "show running-config",
-    "show startup-config",
     "show version",
-    "show inventory",
-    "show clock",
-    "show users",
-    "show logging",
-    "show ip ssh",
-    "show ip interface brief",
-    "show interfaces description",
-    "show ip route",
-    "show ip protocols",
-    "show ip ospf neighbor",
-    "show access-lists",
-    "show cdp neighbors",
+    "show interfaces",
+    "show interfaces switchport",
     "show cdp neighbors detail",
+    "show lldp neighbors detail",
+    "show running-config",
 ]
 FORTINET_COMMANDS = [
     "get system status",
-    "show",                              # Konfiguration (nur Abweichungen vom Standard)
+    "get hardware status",
+    "show system interface",
+    "diagnose lldprx neighbor details",
     "get system interface physical",
-    "get router info routing-table all",
-    "get router info ospf neighbor",
-    "get system arp",
-    "get system admin list",
-    "get system performance status",
+    "show full-configuration",           # komplette Konfiguration inkl. Standardwerte
 ]
 COMMANDS = {"cisco": CISCO_COMMANDS, "fortinet": FORTINET_COMMANDS}
 # -----------------------------------------

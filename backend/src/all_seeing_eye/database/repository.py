@@ -82,6 +82,11 @@ def get_device(device_id: int) -> dict | None:
         device = session.get(Device, device_id)
         return device.to_dict() if device else None
 
+def get_device_by_hostname(hostname: str) -> dict | None:
+    with SessionFactory() as session:
+        device = session.scalar(select(Device).where(func.lower(Device.hostname) == hostname.lower())) 
+        return device.to_dict() if device else None
+
 def list_devices() -> list[dict]:
     with SessionFactory() as session:
         devices = session.scalars(select(Device)).all()
@@ -146,6 +151,11 @@ def list_connections() -> list[dict]:
             data["target_device_id"] = (connection.target_interface.device_id if connection.target_interface else None)
             result.append(data)
         return result
+
+def list_unresolved_connections() -> list[dict]:
+    with SessionFactory() as session:
+        statement = select(Connection).where(Connection.target_interface_id.is_(None))
+        return [connection.to_dict() for connection in session.scalars(statement).all()]
 
 def save_report(job_id: int, content: str) -> int:
     with SessionFactory() as session:
@@ -321,6 +331,13 @@ def finish_analysis(analysis_id: int, status: str, error: str | None = None) -> 
     if status == "failed":
         log_event("analyzer", "analysis_failed", "analysis", analysis_id, "failed", error)
 
+def get_analyses_of_job(job_id: int) -> list[dict]:
+    with SessionFactory() as session:
+        statement = (select(Analysis)
+                     .join(Collection, Analysis.collection_id == Collection.id)
+                     .where(Collection.job_id == job_id)
+                     .order_by(Analysis.created_at))
+        return [analysis.to_dict() for analysis in session.scalars(statement).all()]
 
 def add_finding(analysis_id: int, detected_by: str, title: str, category: str, severity: str, 
                 description: str, reason: str, recommendation: str, evidence: str | None = None,

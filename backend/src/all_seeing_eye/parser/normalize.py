@@ -47,6 +47,9 @@ def normalize_mac(mac: str | None) -> str | None:
 def to_prefix(ip_address: str, mask: str) -> str:
     return str(ipaddress.ip_interface(f"{ip_address}/{mask}"))
 
+def same_interface(a: str, b: str) -> bool:
+    return normalize_interface_name(a).lower() == normalize_interface_name(b).lower()
+
 def detect_os_type(show_version: str | None) -> str | None:
     if not show_version:
         return None

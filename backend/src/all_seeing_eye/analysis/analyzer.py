@@ -34,7 +34,7 @@ LOCAL_CHECKS = {"regex", "not_regex", "contains", "not_contains"}   # werden ohn
 ALL_VENDORS = {"", "all", "any", "*"}                              # SecurityRule.vendor für alle Hersteller
 
 # Ans LLM geht nur die Konfiguration. Mit allen Ausgaben (ACLs, CDP ...) hat llama3.1:8b im Test Zeilen übersehen.
-LLM_SECTIONS = {"show running-config", "show running config", "show"}
+LLM_SECTIONS = {"show running-config", "show running config", "show", "show full-configuration"}
 
 # FortiGate "show" hat ~300.000 Zeichen, fast nur Standard-Datenbanken. Ans LLM gehen nur diese Blöcke.
 FORTINET_BLOCKS = (
@@ -129,8 +129,10 @@ class AnalysisRequest:
     chunks: list[str]           # geschwärzt, nur Konfiguration, für das LLM
 
     def messages(self, chunk: str, rule: SecurityRule) -> list[dict]:
+        # Konfiguration vor der Regel: Der Anfang ist dann für alle Regeln eines Geräts gleich,
+        # Ollama kann ihn aus dem Cache nehmen und muss die Konfiguration nur einmal lesen
         user = (f"Gerät: {self.hostname} (Hersteller: {self.vendor}, Version: {self.os_version or 'unbekannt'})\n\n"
-                f"Regel: {rule.title}\nHinweis: {rule.check_value}\n\nKonfiguration:\n{chunk}")
+                f"Konfiguration:\n{chunk}\n\nRegel: {rule.title}\nHinweis: {rule.check_value}")
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
 
 
@@ -232,7 +234,7 @@ def parse_check(text: str, rule: SecurityRule, chunk: str) -> DetectedFinding | 
     evidence als ganze Zeile in der Konfiguration steht (sonst erfunden, oder nur ein Teil wie
     "ip http server" aus "no ip http server")."""
     check = RuleCheck.model_validate_json(text)
-    if not check.violated:
+    if not check.violated or not check.evidence.strip():     # ohne Beleg kein Befund
         return None
     if _normalize(check.evidence) not in {_normalize(line) for line in chunk.splitlines()}:
         logger.warning("Evidence für %s steht nicht in der Konfiguration, verworfen: %r", rule.code, check.evidence)

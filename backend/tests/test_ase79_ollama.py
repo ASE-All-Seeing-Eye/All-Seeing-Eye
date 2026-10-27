@@ -1,11 +1,11 @@
 """ASE-79 (1.2.2.17): Ollama-Anbindung. Ollama wird simuliert, es läuft kein echtes Modell."""
 import httpx
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from all_seeing_eye.analysis import analyzer
-from all_seeing_eye.database.models import Analysis, Base, Finding
+from all_seeing_eye.database.models import Analysis, Finding
 from all_seeing_eye.settings import settings
 from conftest import engine, make_collection, make_rule
 
@@ -34,17 +34,11 @@ def test_anfrage_geht_mit_richtigen_einstellungen_an_ollama(monkeypatch):
 
 
 @pytest.fixture
-def stored_collection():
-    """Speichert Regel und Collection dauerhaft (analyze_collection nutzt eine eigene Verbindung)
-    und leert danach alle Tabellen wieder."""
-    with Session(engine) as s:
-        s.add(make_rule("LLM-1", "llm"))
-        collection_id = make_collection(s, outputs={"show running-config": "ip http server"}).id
-        s.commit()
-    yield collection_id
-    with engine.begin() as conn:
-        tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
-        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+def stored_collection(db):
+    db.add(make_rule("LLM-1", "llm"))
+    collection_id = make_collection(db, outputs={"show running-config": "ip http server"}).id
+    db.commit()
+    return collection_id
 
 
 @pytest.mark.parametrize("error", [

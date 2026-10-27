@@ -10,7 +10,7 @@ assert TEST_DATABASE_URL.endswith("_test"), "Nur eine Test-Datenbank verwenden" 
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 import pytest  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from all_seeing_eye.database.models import (Base, Collection, Command, Configuration,  # noqa: E402
@@ -28,6 +28,17 @@ def session():
         with Session(bind=conn, join_transaction_mode="create_savepoint") as s:
             yield s
         transaction.rollback()
+
+
+@pytest.fixture
+def db():
+    """Session, deren Daten wirklich gespeichert werden. Nötig für Code mit eigener Verbindung
+    wie analyze_collection(). Danach werden alle Tabellen geleert."""
+    with Session(engine) as s:
+        yield s
+    tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
 def make_rule(code, check_type="llm", vendor="all", severity="MEDIUM", check_value="x", title=None):

@@ -106,20 +106,25 @@ ALLOWED_COMMANDS = (
 
 ALLOWED_FILTERS = ("include", "exclude", "section", "begin")
 
-DEFAULT_COMMANDS = ("show running-config", "show version", "show cdp neighbors")
+DEFAULT_COMMANDS = (
+    "show version",
+    "show interfaces",
+    "show interfaces switchport",
+    "show cdp neighbors detail",
+    "show lldp neighbors detail",
+    "show running-config",
+)
 
-FORTINET_ALLOWED_COMMANDS = ("show", "get")
+FORTINET_ALLOWED_COMMANDS = ("show", "get", "diagnose lldprx neighbor")
 FORTINET_ALLOWED_FILTERS = ("grep",)
 
 FORTINET_DEFAULT_COMMANDS = (
     "get system status",
-    "show",
+    "get hardware status",
+    "show system interface",
+    "diagnose lldprx neighbor details",
     "get system interface physical",
-    "get router info routing-table all",
-    "get router info ospf neighbor",
-    "get system arp",
-    "get system admin list",
-    "get system performance status",
+    "show full-configuration",
 )
 
 DEFAULT_COMMANDS_BY_VENDOR = {
@@ -252,7 +257,7 @@ class ConfigCollector:
         """Liest den Hostnamen aus der Config (oder Statusausgabe) und korrigiert den Prompt."""
         if vendor == "fortinet":
             patterns = (("get system status", r"^Hostname\s*:\s*(\S+)"),
-                        ("show", r'^\s*set hostname "?([^"\s]+)"?'))
+                        ("show full-configuration", r'^\s*set hostname "?([^"\s]+)"?'))
             suffix = " #"
         else:
             patterns = (("show running-config", r"^hostname\s+(\S+)"),
