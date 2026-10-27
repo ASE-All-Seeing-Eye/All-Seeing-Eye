@@ -331,6 +331,13 @@ def finish_analysis(analysis_id: int, status: str, error: str | None = None) -> 
     if status == "failed":
         log_event("analyzer", "analysis_failed", "analysis", analysis_id, "failed", error)
 
+def get_analyses_of_job(job_id: int) -> list[dict]:
+    with SessionFactory() as session:
+        statement = (select(Analysis)
+                     .join(Collection, Analysis.collection_id == Collection.id)
+                     .where(Collection.job_id == job_id)
+                     .order_by(Analysis.created_at))
+        return [analysis.to_dict() for analysis in session.scalars(statement).all()]
 
 def add_finding(analysis_id: int, detected_by: str, title: str, category: str, severity: str, 
                 description: str, reason: str, recommendation: str, evidence: str | None = None,
