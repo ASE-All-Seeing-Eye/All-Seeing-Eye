@@ -34,7 +34,7 @@ LOCAL_CHECKS = {"regex", "not_regex", "contains", "not_contains"}   # werden ohn
 ALL_VENDORS = {"", "all", "any", "*"}                              # SecurityRule.vendor für alle Hersteller
 
 # Ans LLM geht nur die Konfiguration. Mit allen Ausgaben (ACLs, CDP ...) hat llama3.1:8b im Test Zeilen übersehen.
-LLM_SECTIONS = {"show running-config", "show running config", "show"}
+LLM_SECTIONS = {"show running-config", "show running config", "show", "show full-configuration"}
 
 # FortiGate "show" hat ~300.000 Zeichen, fast nur Standard-Datenbanken. Ans LLM gehen nur diese Blöcke.
 FORTINET_BLOCKS = (

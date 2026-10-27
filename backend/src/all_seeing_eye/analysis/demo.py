@@ -92,7 +92,7 @@ DEMO_RULES = [
 
 # Die eigentliche Konfiguration kommt zuerst, wie beim Collector. Steht sie mitten zwischen
 # den anderen Ausgaben, übersieht llama3.1:8b darin deutlich mehr.
-CONFIG_FILES = ("show_running_config", "show")
+CONFIG_FILES = ("show_running_config", "show", "show_full_configuration")
 
 
 def read_outputs(folder: Path) -> list[tuple[str, str]]:
