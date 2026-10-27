@@ -129,8 +129,10 @@ class AnalysisRequest:
     chunks: list[str]           # geschwärzt, nur Konfiguration, für das LLM
 
     def messages(self, chunk: str, rule: SecurityRule) -> list[dict]:
+        # Konfiguration vor der Regel: Der Anfang ist dann für alle Regeln eines Geräts gleich,
+        # Ollama kann ihn aus dem Cache nehmen und muss die Konfiguration nur einmal lesen
         user = (f"Gerät: {self.hostname} (Hersteller: {self.vendor}, Version: {self.os_version or 'unbekannt'})\n\n"
-                f"Regel: {rule.title}\nHinweis: {rule.check_value}\n\nKonfiguration:\n{chunk}")
+                f"Konfiguration:\n{chunk}\n\nRegel: {rule.title}\nHinweis: {rule.check_value}")
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
 
 
