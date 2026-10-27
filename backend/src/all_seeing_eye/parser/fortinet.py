@@ -151,6 +151,8 @@ class FortiParser(Parser):
         template = TEMPLATES_BY_COMMAND.get(command)
         if template is None:
             return None
+        if command in {"get system interface physical"}:
+            output = "\n".join(line.strip() for line in output.splitlines())
         parser = ttp(data=output, template=template)
         parser.parse()
         return parser.result()[0][0] or None
