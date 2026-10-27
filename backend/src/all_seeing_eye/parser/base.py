@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from all_seeing_eye.parser.models import ParsedDevice, ParsedInterface, ParsedNeighbor, ParsedResult
 
 class Parser(ABC):
-    def _parse(self, commands: dict[str, str]) -> ParsedResult:
+    def parse(self, commands: dict[str, str]) -> ParsedResult:
         result = ParsedResult()
 
         result.device, errors = self.parse_device(commands)
