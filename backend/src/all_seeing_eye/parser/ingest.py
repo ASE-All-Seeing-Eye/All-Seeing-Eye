@@ -1,5 +1,5 @@
 from all_seeing_eye.parser.base import Parser
-from all_seeing_eye.parser.normalize import detect_os_type
+from all_seeing_eye.parser.normalize import detect_os_type, same_interface
 from all_seeing_eye.parser.cisco import CiscoParser
 from all_seeing_eye.parser.fortinet import FortiParser
 from all_seeing_eye.database import repository as db
@@ -12,6 +12,24 @@ def get_parser(commands: dict[str, str]) -> Parser | None:
     if os_type == "fortios":
         return FortiParser()
     return None
+
+def resolve_connections() -> None:
+    for connection in db.list_unresolved_connections():
+        if not connection["remote_hostname"] or not connection["remote_interface"]:
+            continue
+        device = db.get_device_by_hostname(connection["remote_hostname"])
+        if device is None:
+            continue
+        for interface in db.list_interfaces(device["id"]):
+            if same_interface(interface["name"], connection["remote_interface"]):
+                db.create_or_update_connection(
+                    source_interface_id=connection["source_interface_id"],
+                    method=connection["method"],
+                    remote_hostname=connection["remote_hostname"],
+                    remote_interface=connection["remote_interface"],
+                    target_interface_id=interface["id"]
+                )
+                break
 
 def process_collection(collection_id: int) -> None:
     collection = db.get_collection(collection_id)

@@ -82,6 +82,11 @@ def get_device(device_id: int) -> dict | None:
         device = session.get(Device, device_id)
         return device.to_dict() if device else None
 
+def get_device_by_hostname(hostname: str) -> dict | None:
+    with SessionFactory() as session:
+        device = session.scalar(select(Device).where(func.lower(Device.hostname) == hostname.lower())) 
+        return device.to_dict() if device else None
+
 def list_devices() -> list[dict]:
     with SessionFactory() as session:
         devices = session.scalars(select(Device)).all()
@@ -146,6 +151,11 @@ def list_connections() -> list[dict]:
             data["target_device_id"] = (connection.target_interface.device_id if connection.target_interface else None)
             result.append(data)
         return result
+
+def list_unresolved_connections() -> list[dict]:
+    with SessionFactory() as session:
+        statement = select(Connection).where(Connection.target_interface_id.is_(None))
+        return [connection.to_dict() for connection in session.scalars(statement).all()]
 
 def save_report(job_id: int, content: str) -> int:
     with SessionFactory() as session:
