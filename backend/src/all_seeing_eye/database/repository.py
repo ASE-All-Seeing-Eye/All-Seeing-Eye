@@ -1,25 +1,24 @@
 from sqlalchemy import select
 from all_seeing_eye.database.models import *
 from all_seeing_eye.database.session import SessionFactory
+from all_seeing_eye.constants import Status, Actor, Action, Protocol, PortState, Method, ParseStatus, FINISHED
 from datetime import datetime, timezone
-
-JOB_STATUSES = {"pending", "running", "completed", "failed"}
 
 def create_job(target: str) -> int:
     with SessionFactory() as session:
-        job = Job(target=target, status="pending")
+        job = Job(target=target, status=Status.PENDING)
         session.add(job)
         session.commit()
-    log_event("dashboard", "job_created", "job", job.id, "ok")
+    log_event(Actor.API, Action.JOB_CREATE, "job", job.id, Status.OK)
     return job.id
 
 def get_next_pending_job() -> int | None:
     with SessionFactory() as session:
-        job = session.scalar(select(Job).where(Job.status == "pending").order_by(Job.created_at).limit(1))
+        job = session.scalar(select(Job).where(Job.status == Status.PENDING).order_by(Job.created_at).limit(1))
         return job.id if job else None
 
 def set_job_status(job_id: int, status: str, error: str | None = None) -> None:
-    if status not in JOB_STATUSES:
+    if status not in Status:
         raise ValueError(f"Ungültiger Status: {status}")
     
     with SessionFactory() as session:
@@ -29,11 +28,11 @@ def set_job_status(job_id: int, status: str, error: str | None = None) -> None:
         
         job.status = status
         job.error_message = error
-        if status in {"completed", "failed"}:
+        if status in FINISHED:
             job.finished_at = datetime.now(timezone.utc)
         session.commit()
-    if status in {"completed", "failed"}:
-        log_event("worker", "job_finished", "job", job_id, "ok" if status == "completed" else "failed", error)
+    if status in FINISHED:
+        log_event(Actor.WORKER, Action.JOB_FINISH, "job", job_id, status, error)
 
 def get_job(job_id: int) -> dict | None:
     with SessionFactory() as session:
@@ -179,7 +178,7 @@ def get_report(job_id: int) -> dict | None:
 
 def create_scan(job_id: int) -> int:
     with SessionFactory() as session:
-        scan = Scan(job_id=job_id, status="running")
+        scan = Scan(job_id=job_id, status=Status.RUNNING)
         session.add(scan)
         session.commit()
         return scan.id
@@ -201,9 +200,9 @@ def add_scan_host(scan_id: int, ip_address: str, device_id: int | None = None) -
         return scan_host.id
 
 def add_scan_port(scanhost_id: int, protocol: str, port: int, state: str, service: str | None = None, banner: str | None = None) -> int:
-    if protocol not in {"tcp", "udp"}:
+    if protocol not in {Protocol.TCP, Protocol.UDP}:
         raise ValueError(f"Ungültiges Protokoll: {protocol}")
-    if state not in {"open", "closed", "filtered", "open|filtered"}:
+    if state not in {PortState.OPEN, PortState.FILTERED, PortState.CLOSED, PortState.OPEN_FILTERED}:
         raise ValueError(f"Ungültiger Zustand: {state}")
     with SessionFactory() as session:
         scan_port = ScanPort(scanhost_id=scanhost_id, protocol=protocol, port=port, state=state, service=service, banner=banner)
@@ -219,6 +218,9 @@ def get_ports_of_host(scanhost_id: int) -> list[dict]:
         return [port.to_dict() for port in session.scalars(statement).all()]
 
 def finish_scan(scan_id: int, status: str) -> None:
+    if status not in FINISHED:
+        raise ValueError(f"Ungültiger Status: {status}")
+
     with SessionFactory() as session:
         scan = session.get(Scan, scan_id)
         if scan is None:
@@ -226,6 +228,8 @@ def finish_scan(scan_id: int, status: str) -> None:
         scan.status = status
         scan.finished_at = datetime.now(timezone.utc)
         session.commit()
+
+    log_event(Actor.SCANNER, Action.SCAN, "scan", scan_id, status)
 
 def get_hosts_of_scan(scan_id: int) -> list[dict]:
     with SessionFactory() as session:
@@ -253,7 +257,7 @@ def get_devices_of_job(job_id: int) -> list[dict]:
 
 def create_collection(device_id: int, job_id: int) -> int:
     with SessionFactory() as session:
-        collection = Collection(device_id=device_id, job_id=job_id, status="running")
+        collection = Collection(device_id=device_id, job_id=job_id, status=Status.RUNNING)
         session.add(collection)
         session.commit()
         return collection.id
@@ -264,7 +268,7 @@ def get_collection(collection_id: int) -> dict | None:
         return collection.to_dict() if collection else None
 
 def finish_collection(collection_id: int, status: str, error: str | None = None) -> None:
-    if status not in {"ok", "partial", "failed"}:
+    if status not in FINISHED:
         raise ValueError(f"Ungültiger Status: {status}")
 
     with SessionFactory() as session:
@@ -275,8 +279,7 @@ def finish_collection(collection_id: int, status: str, error: str | None = None)
         collection.error_message = error
         session.commit()
 
-    if status == "failed":
-        log_event("collector", "device_login", "device", collection.device_id, "failed", error)
+    log_event(Actor.COLLECTOR, Action.COLLECT, "collection", collection.id, status, error)
 
 def get_collections_of_job(job_id: int) -> list[dict]:
     with SessionFactory() as session:
@@ -285,7 +288,7 @@ def get_collections_of_job(job_id: int) -> list[dict]:
 
 def save_configuration(collection_id: int, content: str) -> int:
     with SessionFactory() as session:
-        configuration = Configuration(collection_id=collection_id, content=content, parse_status="pending")
+        configuration = Configuration(collection_id=collection_id, content=content, parse_status=ParseStatus.PENDING)
         session.add(configuration)
         session.commit()
         return configuration.id
@@ -309,7 +312,7 @@ def get_configuration_of_collection(collection_id: int) -> dict | None:
 
 def save_command(collection_id: int, name: str, output: str | None = None, error: str | None = None) -> int:
     with SessionFactory() as session:
-        command = Command(collection_id=collection_id, name=name, output=output, parse_status="pending", error_message=error)
+        command = Command(collection_id=collection_id, name=name, output=output, parse_status=ParseStatus.PENDING, error_message=error)
         session.add(command)
         session.commit()
         return command.id
@@ -331,17 +334,17 @@ def get_commands_of_collection(collection_id: int) -> list[dict]:
         return [command.to_dict() for command in session.scalars(statement).all()]
 
 def create_analysis(collection_id: int, method: str, ai_model: str | None = None) -> int:
-    if method not in {"rule", "llm", "both"}:
+    if method not in {Method.LLM, Method.RULE, Method.BOTH}:
         raise ValueError(f"Ungültige Methode: {method}")
     
     with SessionFactory() as session:
-        analysis = Analysis(collection_id=collection_id, method=method, ai_model=ai_model, status="running")
+        analysis = Analysis(collection_id=collection_id, method=method, ai_model=ai_model, status=Status.RUNNING)
         session.add(analysis)
         session.commit()
         return analysis.id
 
 def finish_analysis(analysis_id: int, status: str, error: str | None = None) -> None:
-    if status not in {"completed", "failed"}:
+    if status not in {Status.OK, Status.FAILED}:
         raise ValueError(f"Ungültiger Status: {status}")
     
     with SessionFactory() as session:
@@ -353,8 +356,7 @@ def finish_analysis(analysis_id: int, status: str, error: str | None = None) -> 
         analysis.finished_at = datetime.now(timezone.utc)
         session.commit()
 
-    if status == "failed":
-        log_event("analyzer", "analysis_failed", "analysis", analysis_id, "failed", error)
+    log_event(Actor.ANALYZER, Action.ANALYZE, "analysis", analysis_id, status, error)
 
 def get_analyses_of_job(job_id: int) -> list[dict]:
     with SessionFactory() as session:
@@ -395,7 +397,7 @@ def get_findings_of_device(device_id: int) -> list[dict]:
         )
         return [f.to_dict() for f in session.scalars(statement).all()]
 
-def get_findings_of_job(job_id) -> list[dict]:
+def get_findings_of_job(job_id: int) -> list[dict]:
     with SessionFactory() as session:
         statement = (select(Finding)
                      .join(Analysis, Finding.analysis_id == Analysis.id)
@@ -420,7 +422,7 @@ def list_securityrules(vendor: str | None = None) -> list[dict]:
             statement = statement.where(SecurityRule.vendor == vendor)
         return [rule.to_dict() for rule in session.scalars(statement.order_by(SecurityRule.code)).all()]
 
-def log_event(actor: str, action: str, object_type: str, object_id: int | None, result: str, message: str | None = None) -> None:
+def log_event(actor: Actor, action: Action, object_type: str, object_id: int | None, result: Status, message: str | None = None) -> None:
     with SessionFactory() as session:
         log = AuditLog(actor=actor, action=action, object_type=object_type, object_id=object_id, result=result, message=message)
         session.add(log)
