@@ -52,6 +52,11 @@ def test_redact_entfernt_geheimnisse_aber_behaelt_den_typ(line, expected):
     assert analyzer.redact(line) == expected
 
 
+@pytest.mark.parametrize("line", ["snmp-server community public RO", "snmp-server community Private RW"])
+def test_redact_laesst_standard_communities_sichtbar(line):
+    assert analyzer.redact(line) == line          # sonst kann das LLM 'public' nie als Fehler erkennen
+
+
 def test_redact_laesst_normale_zeilen_unveraendert():
     text = "hostname R1\nip http server\n transport input ssh"
     assert analyzer.redact(text) == text
