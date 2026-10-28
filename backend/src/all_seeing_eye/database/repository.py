@@ -124,7 +124,8 @@ def list_interfaces(device_id: int) -> list[dict]:
         return [interface.to_dict() for interface in session.scalars(statement).all()]
 
 def create_or_update_connection(source_interface_id: int, method: str, remote_hostname: str | None = None, 
-                                remote_interface: str | None = None, target_interface_id: int | None = None) -> int:
+                                remote_interface: str | None = None, remote_ip: str | None = None, 
+                                target_interface_id: int | None = None) -> int:
     with SessionFactory() as session:
         connection = session.scalar(select(Connection).where(
             Connection.source_interface_id == source_interface_id,
@@ -137,6 +138,8 @@ def create_or_update_connection(source_interface_id: int, method: str, remote_ho
             connection = Connection(source_interface_id=source_interface_id, method=method,
                                     remote_hostname=remote_hostname, remote_interface=remote_interface)
             session.add(connection)
+        if remote_ip is not None:
+            connection.remote_ip = remote_ip
         if target_interface_id is not None:
             connection.target_interface_id = target_interface_id
         session.commit()
@@ -190,13 +193,30 @@ def get_scan(scan_id: int) -> dict | None:
     data["scanned_hosts"] = get_hosts_of_scan(scan_id=scan_id)
     return data
 
-def add_scan_host(scan_id: int, ip_address: str, open_tcp_ports: list[int] | None = None, open_udp_ports: list[int] | None = None,
-                   device_id: int | None = None) -> int:
+def add_scan_host(scan_id: int, ip_address: str, device_id: int | None = None) -> int:
     with SessionFactory() as session:
-        scan_host = ScanHost(scan_id=scan_id, ip_address=ip_address, device_id=device_id, open_tcp_ports=open_tcp_ports, open_udp_ports=open_udp_ports)
+        scan_host = ScanHost(scan_id=scan_id, ip_address=ip_address, device_id=device_id)
         session.add(scan_host)
         session.commit()
         return scan_host.id
+
+def add_scan_port(scanhost_id: int, protocol: str, port: int, state: str, service: str | None = None, banner: str | None = None) -> int:
+    if protocol not in {"tcp", "udp"}:
+        raise ValueError(f"Ungültiges Protokoll: {protocol}")
+    if state not in {"open", "closed", "filtered", "open|filtered"}:
+        raise ValueError(f"Ungültiger Zustand: {state}")
+    with SessionFactory() as session:
+        scan_port = ScanPort(scanhost_id=scanhost_id, protocol=protocol, port=port, state=state, service=service, banner=banner)
+        session.add(scan_port)
+        session.commit()
+        return scan_port.id
+
+def get_ports_of_host(scanhost_id: int) -> list[dict]:
+    with SessionFactory() as session:
+        statement = (select(ScanPort)
+                     .where(ScanPort.scanhost_id == scanhost_id)
+                     .order_by(ScanPort.protocol, ScanPort.port))
+        return [port.to_dict() for port in session.scalars(statement).all()]
 
 def finish_scan(scan_id: int, status: str) -> None:
     with SessionFactory() as session:
@@ -210,7 +230,12 @@ def finish_scan(scan_id: int, status: str) -> None:
 def get_hosts_of_scan(scan_id: int) -> list[dict]:
     with SessionFactory() as session:
         statement = select(ScanHost).where(ScanHost.scan_id == scan_id)
-        return [host.to_dict() for host in session.scalars(statement).all()]
+        result = []
+        for host in session.scalars(statement).all():
+            data = host.to_dict()
+            data["ports"] = [port.to_dict() for port in host.scanports]
+            result.append(data)
+        return result
 
 def get_devices_of_job(job_id: int) -> list[dict]:
     with SessionFactory() as session:
