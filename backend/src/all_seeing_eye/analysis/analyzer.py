@@ -81,8 +81,13 @@ def rule_applies(rule: SecurityRule, vendor: str | None) -> bool:
 # ---------------------------------------------------------------------------
 
 def redact(text: str) -> str:
-    """Entfernt Passwörter, Hashes und SNMP-Communities."""
-    return _SECRET.sub(lambda m: f"{m.group(1)}{m.group(2) or ''} <entfernt>", text)
+    """Entfernt Passwörter, Hashes und SNMP-Communities. public/private bleiben sichtbar:
+    das sind bekannte Standardwerte, kein Geheimnis, und das LLM soll sie als Fehler erkennen."""
+    def replace(m: re.Match) -> str:
+        if m.group(1).lower() == "community" and m.group(3).strip('"').lower() in ("public", "private"):
+            return m.group(0)
+        return f"{m.group(1)}{m.group(2) or ''} <entfernt>"
+    return _SECRET.sub(replace, text)
 
 
 def trim_fortinet_config(text: str) -> str:
@@ -106,7 +111,7 @@ def prepare_llm_chunks(sections: list[tuple[str, str]], vendor: str | None) -> l
     """Nur die Konfiguration (sonst alle Ausgaben), geschwärzt und in Blöcke unter MAX_CHARS geteilt."""
     selected = [(n, o) for n, o in sections if n.lower() in LLM_SECTIONS] or sections
     fortinet = vendor_key(vendor) == "fortinet"
-    text = "".join(f"### {n}\n{redact(trim_fortinet_config(o) if fortinet and n == 'show' else o)}\n"
+    text = "".join(f"### {n}\n{redact(trim_fortinet_config(o) if fortinet and n in ('show', 'show full-configuration') else o)}\n"
                    for n, o in selected)
     chunks, current = [], ""
     for line in text.splitlines(keepends=True):
