@@ -14,9 +14,9 @@ from all_seeing_eye.database.models import Device
 from all_seeing_eye.database.session import SessionFactory
 from all_seeing_eye.settings import settings
 
-from .collector import ConfigCollector, ConnectionSettings
-from .models import Credentials
-from .repository import CollectionRepository, to_target, vendor_key
+from all_seeing_eye.collector.collector import ConfigCollector, ConnectionSettings
+from all_seeing_eye.collector.models import Credentials
+from all_seeing_eye.collector.repository import CollectionRepository, to_target, vendor_key
 
 # ---- An deine Konfiguration anpassen ----
 # Die SSH-Zugangsdaten stehen in backend/.env (CISCO_SSH_USERNAME, CISCO_SSH_PASSWORD, ...)

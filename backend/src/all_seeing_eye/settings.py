@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -11,6 +13,6 @@ class Settings(BaseSettings):
     cisco_ssh_secret: str | None = None
     fortinet_ssh_username: str | None = None
     fortinet_ssh_password: str | None = None
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parents[2] / ".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()
