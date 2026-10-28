@@ -84,6 +84,7 @@ def process_collection(collection_id: int) -> None:
             source_interface_id=source_interface_id,
             remote_hostname=neighbor.remote_hostname,
             remote_interface=neighbor.remote_interface,
+            remote_ip=neighbor.remote_ip,
             method=neighbor.method
         )
     if not result.interfaces and result.errors:

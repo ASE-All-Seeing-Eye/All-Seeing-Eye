@@ -2,7 +2,7 @@ from sqlalchemy import String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
 from datetime import datetime
 from typing import List
-from sqlalchemy.dialects.postgresql import INET, ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy import Integer, func, UniqueConstraint
 
 class Base(DeclarativeBase):
@@ -43,11 +43,24 @@ class ScanHost(Base):
     device_id: Mapped[int | None] = mapped_column(ForeignKey("device.id"))
     ip_address: Mapped[str] = mapped_column(INET)
     discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    open_tcp_ports: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
-    open_udp_ports: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
 
     scan: Mapped["Scan"] = relationship(back_populates="scanhosts", foreign_keys=[scan_id])
     device: Mapped["Device | None"] = relationship(back_populates="scanhosts", foreign_keys=[device_id])
+    scanports: Mapped[List["ScanPort"]] = relationship(back_populates="scanhost", cascade="all, delete-orphan")
+
+class ScanPort(Base):
+    __tablename__ = "scanport"
+    __table_args__ = (UniqueConstraint("scanhost_id", "protocol", "port"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    scanhost_id: Mapped[int] = mapped_column(ForeignKey("scanhost.id"))
+    protocol: Mapped[str] = mapped_column(String())
+    port: Mapped[int] = mapped_column(Integer())
+    state: Mapped[str] = mapped_column(String())
+    service: Mapped[str | None] = mapped_column(String())
+    banner: Mapped[str | None] = mapped_column(Text())
+
+    scanhost: Mapped["ScanHost"] = relationship(back_populates="scanports", foreign_keys=[scanhost_id])
 
 class Device(Base):
     __tablename__ = "device"
@@ -90,6 +103,7 @@ class Connection(Base):
     target_interface_id: Mapped[int | None] = mapped_column(ForeignKey("interface.id"))
     remote_hostname: Mapped[str | None] = mapped_column(String())
     remote_interface: Mapped[str | None] = mapped_column(String())
+    remote_ip: Mapped[str | None] = mapped_column(INET)
     method: Mapped[str] = mapped_column(String())
 
     source_interface: Mapped["Interface"] = relationship(back_populates="source_connections", foreign_keys=[source_interface_id])
