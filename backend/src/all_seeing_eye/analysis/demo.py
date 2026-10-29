@@ -32,7 +32,8 @@ DEMO_RULES = [
     # ---- werden von Ollama geprüft ----
     demo_rule("LLM-01", "Unverschlüsselte Verwaltung (Telnet/HTTP)", "Management", "HIGH", "all", "llm",
               "Telnet oder HTTP ohne s ist als Verwaltungszugang erlaubt (z. B. 'transport input telnet', "
-              "'ip http server', 'set allowaccess ... http' oder '... telnet')",
+              "'ip http server', 'set allowaccess ... http' oder '... telnet', 'set admin-telnet enable'). "
+              "Reine Portnummern wie 'set admin-port 80' oder 'admin-telnet-port 23' sind kein Verstoß",
               "Nur SSH und HTTPS für die Verwaltung erlauben"),
     demo_rule("LLM-02", "SNMP mit Standard-Community", "Management", "CRITICAL", "all", "llm",
               "SNMP-Community heißt 'public' oder 'private'",
