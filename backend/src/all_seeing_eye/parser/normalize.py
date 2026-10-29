@@ -1,5 +1,6 @@
 import re
 import ipaddress
+from all_seeing_eye.constants import OSType
 
 CISCO_INTERFACE_NAMES = {
     "gi": "GigabitEthernet", "gig": "GigabitEthernet", "gigabitethernet": "GigabitEthernet",
@@ -50,16 +51,16 @@ def to_prefix(ip_address: str, mask: str) -> str:
 def same_interface(a: str, b: str) -> bool:
     return normalize_interface_name(a).lower() == normalize_interface_name(b).lower()
 
-def detect_os_type(show_version: str | None) -> str | None:
+def detect_os_type(show_version: str | None) -> OSType | None:
     if not show_version:
         return None
     text = show_version.lower()
     if "nx-os" in text or "nexus operating system" in text:
-        return "nx_os"
+        return OSType.NXOS
     if "ios xe" in text or "ios-xe" in text:
-        return "ios_xe"
+        return OSType.IOSXE
     if "cisco ios software" in text:
-        return "ios"
+        return OSType.IOS
     if "fortigate" in text or "fortios" in text:
-        return "fortios"
+        return OSType.FORTIOS
     return None

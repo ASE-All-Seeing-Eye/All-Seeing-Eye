@@ -20,7 +20,7 @@ class OSType(StrEnum):
     IOS = "ios"
     IOSXE = "iosxe"
     NXOS = "nxos"
-    FORTINET = "fortinet"
+    FORTIOS = "fortios"
 
 class Severity(StrEnum):
     CRITICAL = "critical"
