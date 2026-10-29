@@ -87,7 +87,8 @@ def main() -> None:
         job = repo.create_job(target="GNS3-Lab")
 
         targets = [to_target(d, credentials[vendor_key(d.vendor)]) for d in devices.values()]
-        collector = ConfigCollector(settings=ConnectionSettings(retries=1, retry_delay=2))
+        # nacheinander: alle Geräte laufen auf derselben GNS3-VM und bremsen sich parallel gegenseitig aus
+        collector = ConfigCollector(max_workers=1, settings=ConnectionSettings(retries=1, retry_delay=2))
         results = collector.collect_many(targets, COMMANDS)
 
         print()
