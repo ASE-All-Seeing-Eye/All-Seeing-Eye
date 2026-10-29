@@ -33,7 +33,7 @@ class SSHConnectionClosedError(Exception):
 class ConnectionSettings:
     retries: int = 2
     retry_delay: float = 3.0
-    timeout: int = 15
+    timeout: int = 30           # FortiGate-VM braucht bei ausgelasteter UCS oft länger als 15 s
     strict_host_key: bool = False
     allow_telnet: bool = False
 
