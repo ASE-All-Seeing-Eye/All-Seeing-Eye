@@ -5,14 +5,14 @@ from genie.utils.config import Config
 from all_seeing_eye.parser.base import Parser
 from all_seeing_eye.parser.models import ParsedDevice, ParsedInterface, ParsedNeighbor
 from all_seeing_eye.parser.normalize import normalize_interface_name, normalize_hostname, normalize_mac
+from all_seeing_eye.constants import OSType
 
-GENIE_OS = {"ios": "ios", "ios_xe": "iosxe", "nx_os": "nxos"}
 REQUIRED_DEVICE_FIELDS = {"hostname", "model", "os_version"}
 
 class CiscoParser(Parser):
     def __init__(self, os_type: str):
         self.os_type = os_type
-        self.device = Device("parser", os=GENIE_OS[os_type])
+        self.device = Device("parser", os=os_type)
         self.device.custom.setdefault("abstraction", {})["order"] = ["os"]
 
     def _parse(self, commands: dict[str, str], command: str, errors: list[str]) -> dict | None:
@@ -29,7 +29,7 @@ class CiscoParser(Parser):
         errors: list[str] = []
         device = ParsedDevice(vendor="cisco", os_type=self.os_type)
         parsed = self._parse(commands, "show version", errors)
-        if parsed and self.os_type == "nx_os":
+        if parsed and self.os_type == OSType.NXOS:
             hardware = parsed.get("platform", {}).get("hardware", {})
             device.hostname = normalize_hostname(hardware.get("device_name"))
             device.model = hardware.get("model")

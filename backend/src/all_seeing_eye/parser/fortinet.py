@@ -5,6 +5,7 @@ import shlex
 from all_seeing_eye.parser.models import ParsedDevice, ParsedInterface, ParsedNeighbor
 from all_seeing_eye.parser.base import Parser
 from all_seeing_eye.parser.normalize import normalize_hostname, to_prefix
+from all_seeing_eye.constants import OSType
 
 TEMPLATES = Path(__file__).parent / "templates"
 REQUIRED_DEVICE_FIELDS = {
@@ -32,7 +33,7 @@ TEMPLATES_BY_COMMAND = {
 
 class FortiParser(Parser):
     def __init__(self):
-        self.os_type = "fortios"
+        self.os_type = OSType.FORTIOS
 
     def _parse(self, commands: dict[str, str], command: str, errors: list[str]) -> dict | None:
         output = commands.get(command)
