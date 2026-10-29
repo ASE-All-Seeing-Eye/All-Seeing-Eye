@@ -7,30 +7,39 @@ const SCHWEREGRAD = {
   HIGH: { label: "HOCH", farbe: "#ef4444", hell: "#fee2e2", rand: "#dc2626" },
   MEDIUM: { label: "MITTEL", farbe: "#facc15", hell: "#fef9c3", rand: "#ca8a04" },
   LOW: { label: "NIEDRIG", farbe: "#22c55e", hell: "#dcfce7", rand: "#16a34a" },
+  INFO: { label: "INFO", farbe: "#3b82f6", hell: "#dbeafe", rand: "#2563eb" },
 };
 
-const REIHENFOLGE = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+const REIHENFOLGE = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
 
 export default function AnalyseView() {
   const [report, setReport] = useState(null);
   const [fehler, setFehler] = useState(null);
   const [auswahl, setAuswahl] = useState(0);
+  const [geladen, setGeladen] = useState(false);
 
   useEffect(() => {
     fetch(API_URL)
       .then((antwort) => {
+        if (antwort.status === 404) return null;
         if (!antwort.ok) throw new Error("Server antwortet mit Status " + antwort.status);
         return antwort.json();
       })
-      .then(setReport)
+      .then((daten) => {
+        setReport(daten);
+        setGeladen(true);
+      })
       .catch((e) => setFehler(e.message));
   }, []);
 
   if (fehler) {
     return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
   }
-  if (!report) {
+  if (!geladen) {
     return <Rahmen><p>Lade Analyse …</p></Rahmen>;
+  }
+  if (!report) {
+    return <Rahmen><p>Noch keine Analyse vorhanden.</p></Rahmen>;
   }
 
   const inhalt = report.content;
@@ -66,7 +75,7 @@ export default function AnalyseView() {
               )}
             </div>
             <span style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>
-              {REIHENFOLGE.map((stufe) => `${stats[stufe]} ${SCHWEREGRAD[stufe].label.toLowerCase()}`).join(" | ")}
+              {REIHENFOLGE.map((stufe) => `${stats[stufe] ?? 0} ${SCHWEREGRAD[stufe].label.toLowerCase()}`).join(" | ")}
             </span>
           </div>
         </div>
@@ -75,7 +84,7 @@ export default function AnalyseView() {
           <div style={karte}>
             <div style={{ fontWeight: 600, marginBottom: 14 }}>Findings</div>
             {funde.map((fund, index) => {
-              const s = SCHWEREGRAD[fund.severity] || SCHWEREGRAD.LOW;
+              const s = SCHWEREGRAD[String(fund.severity).toUpperCase()] || SCHWEREGRAD.INFO;
               const aktiv = index === auswahl;
               return (
                 <button
@@ -121,7 +130,7 @@ export default function AnalyseView() {
 }
 
 function Details({ fund }) {
-  const s = SCHWEREGRAD[fund.severity] || SCHWEREGRAD.LOW;
+  const s = SCHWEREGRAD[String(fund.severity).toUpperCase()] || SCHWEREGRAD.INFO;
   const evidenz = Object.entries(fund.evidence || {})
     .map(([schluessel, wert]) => `${schluessel}: ${String(wert)}`)
     .join("\n");

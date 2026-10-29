@@ -43,7 +43,7 @@ DEMO_RULES = [
               r'^username admin\b|(?<=config system admin\n)\s*edit "admin"',
               "Personalisierte Admin-Konten anlegen und 'admin' deaktivieren"),
     demo_rule("GEN-02", "Kein externer Syslog-Server", "Logging", "MEDIUM", "all", "not_regex",
-              r"^logging host|config log syslogd setting",
+              r"^logging host|config log syslogd setting\s*\n(\s+set .*\n)*?\s+set status enable",
               "Logs an einen zentralen Syslog-Server senden"),
     demo_rule("GEN-03", "Kein Login-Banner", "Management", "LOW", "all", "not_regex",
               r"^banner (login|motd)|set pre-login-banner enable",
@@ -77,7 +77,7 @@ DEMO_RULES = [
 
     # ---- FortiGate ----
     demo_rule("FGT-01", "Admin-Zugriff nicht auf vertrauenswürdige Hosts beschränkt", "Management", "MEDIUM",
-              "fortinet", "not_regex", r"set trusthost\d",
+              "fortinet", "not_regex", r"set trusthost\d+ (?!0\.0\.0\.0 0\.0\.0\.0)",   # 0.0.0.0 = Standard, alles erlaubt
               "Beim Admin-Konto 'set trusthost1 <Management-Netz>' setzen"),
     demo_rule("FGT-02", "Keine Passwort-Richtlinie für Admins", "Authentifizierung", "MEDIUM", "fortinet",
               "not_regex", r"config system password-policy\s*\n(\s+set .*\n)*?\s+set status enable",

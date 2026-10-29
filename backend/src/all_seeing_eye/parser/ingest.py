@@ -3,13 +3,14 @@ from all_seeing_eye.parser.normalize import detect_os_type, same_interface
 from all_seeing_eye.parser.cisco import CiscoParser
 from all_seeing_eye.parser.fortinet import FortiParser
 from all_seeing_eye.database import repository as db
+from all_seeing_eye.constants import Actor, Action, Status, ParseStatus, OSType
 
 def get_parser(commands: dict[str, str]) -> Parser | None:
     output = commands.get("show version") or commands.get("get system status") or ""
     os_type = detect_os_type(output)
-    if os_type in ["ios", "ios_xe", "nx_os"]:
+    if os_type in [OSType.IOS, OSType.IOSXE, OSType.NXOS]:
         return CiscoParser(os_type)
-    if os_type == "fortios":
+    if os_type == OSType.FORTIOS:
         return FortiParser()
     return None
 
@@ -42,19 +43,19 @@ def process_collection(collection_id: int) -> None:
         commands[row["name"]] = row["output"]
     parser = get_parser(commands)
     if parser is None:
-        db.log_event("parser", "parse", "collection", collection_id, "failed", "Gerätetyp nicht erkannt")
+        db.log_event(Actor.PARSER, Action.PARSE, "collection", collection_id, Status.FAILED, "Gerätetyp nicht erkannt")
         return
     try:
         result = parser.parse(commands)
     except Exception as e:
-        db.log_event("parser", "parse", "collection", collection_id, "failed", str(e))
+        db.log_event(Actor.PARSER, Action.PARSE, "collection", collection_id, Status.FAILED, str(e))
         raise
     for row in command_rows:
         if not row["output"]:
             continue
         parsed = parser.parse_command(row["name"], row["output"])
-        status = "ok" if parsed is not None else "unsupported"
-        db.save_parsed_command(row["id"], parsed, status)
+        command_status = ParseStatus.OK if parsed is not None else ParseStatus.UNSUPPORTED
+        db.save_parsed_command(row["id"], parsed, command_status)
     device_id = db.create_or_update_device(
         management_ip=device["management_ip"],
         hostname=result.device.hostname,
@@ -84,15 +85,17 @@ def process_collection(collection_id: int) -> None:
             source_interface_id=source_interface_id,
             remote_hostname=neighbor.remote_hostname,
             remote_interface=neighbor.remote_interface,
+            remote_ip=neighbor.remote_ip,
             method=neighbor.method
         )
     if not result.interfaces and result.errors:
-        status = "failed"
+        status = Status.FAILED
     elif result.errors:
-        status = "partial"
+        status = Status.PARTIAL
     else:
-        status = "ok"
+        status = Status.OK
     configuration = db.get_configuration_of_collection(collection_id)
     if configuration:
-        db.save_parsed_configuration(configuration["id"], result.config, status)
-    db.log_event("parser", "parse", "collection", collection_id, status, ";".join(result.errors) or None)
+        config_status = ParseStatus.OK if result.config else ParseStatus.FAILED
+        db.save_parsed_configuration(configuration["id"], result.config, config_status)
+    db.log_event(Actor.PARSER, Action.PARSE, "collection", collection_id, status, ";".join(result.errors) or None)
