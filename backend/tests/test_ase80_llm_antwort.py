@@ -47,6 +47,13 @@ def test_verstoss_ohne_echten_beleg_wird_verworfen(evidence):
     assert analyzer.parse_check(answer(evidence, True), RULE, CONFIG) is None
 
 
+def test_fehlende_begruendung_ist_erlaubt():
+    assert analyzer.parse_check('{"evidence": "", "violated": false}', RULE, CONFIG) is None
+    finding = analyzer.parse_check('{"evidence": "username admin privilege 15 secret 9 <entfernt>", "violated": true}',
+                                   RULE, CONFIG)
+    assert finding.description == RULE.title                          # Regeltitel als Ersatz
+
+
 def test_gross_kleinschreibung_und_leerzeichen_sind_egal():
     evidence = "  USERNAME admin   privilege 15 secret 9 <entfernt> "
     assert analyzer.parse_check(answer(evidence, True), RULE, CONFIG) is not None
