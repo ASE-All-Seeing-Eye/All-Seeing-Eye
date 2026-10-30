@@ -29,7 +29,8 @@ def test_anfrage_geht_mit_richtigen_einstellungen_an_ollama(monkeypatch):
     assert client_args == {"host": settings.ollama_host, "timeout": settings.ollama_timeout}
     assert chat_args["model"] == settings.ollama_model
     assert chat_args["options"]["temperature"] == 0          # immer gleiche Antwort
-    assert chat_args["think"] is False                       # kein langsamer Denkmodus
+    # kein langer Denkmodus, gpt-oss lässt sich nur auf "low" stellen
+    assert chat_args["think"] == ("low" if "gpt-oss" in settings.ollama_model else False)
     assert chat_args["format"] == analyzer.RuleCheck.model_json_schema()
 
 
