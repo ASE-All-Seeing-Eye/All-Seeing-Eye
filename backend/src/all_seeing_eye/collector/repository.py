@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from all_seeing_eye.database.models import Collection, Command, Configuration, Device, Job
+from all_seeing_eye.constants import Action, Actor, Status
+from all_seeing_eye.database.models import AuditLog, Collection, Command, Configuration, Device, Job
 
 from .collector import CollectionResult
 from .models import Credentials, SSHTarget
@@ -72,6 +73,10 @@ class CollectionRepository:
             collection.configuration = Configuration(content=config.config, parse_status="pending")
 
         self.session.flush()
+        # H1a: jeder Anmeldeversuch landet im Audit-Log, fehlgeschlagene mit Grund (Passwort falsch, Timeout ...)
+        self.session.add(AuditLog(actor=Actor.COLLECTOR, action=Action.DEVICE_LOGIN, object_type="device",
+                                  object_id=device.id, result=Status.FAILED if result.error else Status.OK,
+                                  message=f"{device.management_ip}: {result.error or 'Anmeldung erfolgreich'}"))
         return collection
 
     def finish_job(self, job: Job, collections: list[Collection]) -> None:
