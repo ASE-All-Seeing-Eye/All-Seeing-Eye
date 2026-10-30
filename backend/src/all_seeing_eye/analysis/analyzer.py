@@ -65,7 +65,8 @@ class RuleCheck(BaseModel):
     sonst antwortet llama3.1:8b oft pauschal violated=false."""
     evidence: str = Field(description="Relevanteste Zeile, wörtlich kopiert; leer, wenn es keine gibt")
     violated: bool = Field(description="true nur, wenn die evidence-Zeile die Regel verletzt")
-    reason: str = Field(description="Ein Satz zur Begründung")
+    # Standardwert: gpt-oss lässt reason bei violated=false manchmal weg, die Antwort ist trotzdem eindeutig
+    reason: str = Field("", description="Ein Satz zur Begründung")
 
 
 def vendor_key(vendor: str | None) -> str:
@@ -246,7 +247,7 @@ def parse_check(text: str, rule: SecurityRule, chunk: str) -> DetectedFinding | 
     if _normalize(check.evidence) not in {_normalize(line) for line in chunk.splitlines()}:
         logger.warning("Evidence für %s steht nicht in der Konfiguration, verworfen: %r", rule.code, check.evidence)
         return None
-    return DetectedFinding(rule, "llm", check.evidence.strip(), check.reason.strip())
+    return DetectedFinding(rule, "llm", check.evidence.strip(), check.reason.strip() or rule.title)
 
 
 def run_llm(request: AnalysisRequest) -> list[DetectedFinding]:
