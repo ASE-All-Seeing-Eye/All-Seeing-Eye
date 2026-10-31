@@ -64,7 +64,7 @@ def test_analyse_speichert_analysis_und_findings(db, monkeypatch):
     db.commit()
     llm_answer = {"evidence": "username admin privilege 15 secret 9 <entfernt>", "violated": True,
                   "reason": "Das Konto heißt admin."}
-    monkeypatch.setattr(analyzer, "ask_llm", lambda messages: json.dumps(llm_answer))
+    monkeypatch.setattr(analyzer, "ask_llm", lambda messages, schema=None: json.dumps(llm_answer))
 
     result = analyzer.analyze_collection(collection_id)
 
@@ -84,11 +84,12 @@ def test_analyse_speichert_analysis_und_findings(db, monkeypatch):
     assert rows["SYSLOG"].evidence is None                               # fehlende Einstellung hat keine Zeile
 
 
-def test_nur_regex_regeln_ohne_llm(db, monkeypatch):
-    db.add(make_rule("HTTP", "regex", check_value=r"^ip http server"))
+def test_ohne_befund_wird_das_llm_nicht_gefragt(db, monkeypatch):
+    db.add(make_rule("TELNET", "regex", check_value=r"^transport input telnet"))
     collection_id = make_collection(db, outputs={"show running-config": CONFIG}).id
     db.commit()
-    monkeypatch.setattr(analyzer, "ask_llm", lambda messages: (_ for _ in ()).throw(AssertionError("LLM aufgerufen")))
+    monkeypatch.setattr(analyzer, "ask_llm",
+                        lambda messages, schema=None: (_ for _ in ()).throw(AssertionError("LLM aufgerufen")))
 
     analyzer.analyze_collection(collection_id)
 
