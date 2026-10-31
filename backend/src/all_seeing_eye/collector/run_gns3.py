@@ -27,7 +27,7 @@ LAB_DEVICES = [
     ("R2", "cisco", "10.40.1.195"),
     ("R3", "cisco", "10.40.1.196"),
     ("R4", "cisco", "10.40.1.197"),
-    ("FortiGate-1", "fortinet", "10.40.1.198"),
+    ("FortiGate-1", "fortinet", "10.40.1.199"),
 ]
 
 OUTPUT_DIR = Path("gns3_output")   # zusätzlich als .txt, zum Nachschauen
