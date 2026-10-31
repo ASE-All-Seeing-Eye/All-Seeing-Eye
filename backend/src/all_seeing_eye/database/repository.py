@@ -423,6 +423,10 @@ def list_securityrules(vendor: str | None = None) -> list[dict]:
         return [rule.to_dict() for rule in session.scalars(statement.order_by(SecurityRule.code)).all()]
 
 def log_event(actor: Actor, action: Action, object_type: str, object_id: int | None, result: Status, message: str | None = None) -> None:
+    if result not in FINISHED:
+        raise ValueError(f"Ungültiges Ergebnis für das Audit-Log: {result}")
+    if message is not None:
+        message = message[:500]
     with SessionFactory() as session:
         log = AuditLog(actor=actor, action=action, object_type=object_type, object_id=object_id, result=result, message=message)
         session.add(log)
