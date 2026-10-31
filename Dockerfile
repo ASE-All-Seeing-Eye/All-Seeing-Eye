@@ -16,10 +16,12 @@ COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend/src ./src
+COPY backend/alembic.ini ./
+COPY backend/migrations ./migrations
 RUN uv sync --frozen --no-dev
 
 COPY --from=frontend /frontend/dist ./static
 ENV STATIC_DIR=/app/static
 
 EXPOSE 8000
-CMD ["sh", "-c", "uv run --no-sync python -m all_seeing_eye.database.models && uv run --no-sync uvicorn all_seeing_eye.api.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn all_seeing_eye.api.main:app --host 0.0.0.0 --port 8000"]

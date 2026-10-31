@@ -221,7 +221,4 @@ class AuditLog(Base):
     object_id: Mapped[int | None] = mapped_column(Integer())
     result: Mapped[str] = mapped_column(String())
     message: Mapped[str | None] = mapped_column(Text)
-
-if __name__ == "__main__":
-    from all_seeing_eye.database.session import engine
-    Base.metadata.create_all(engine)
+    
