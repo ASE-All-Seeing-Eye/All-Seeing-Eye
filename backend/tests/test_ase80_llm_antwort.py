@@ -54,6 +54,19 @@ def test_fehlende_begruendung_ist_erlaubt():
     assert finding.description == RULE.title                          # Regeltitel als Ersatz
 
 
+FORTI_CONFIG = 'config system snmp community\n    edit 1\n        set name "public"\n    next\nend\n'
+
+
+def test_beleg_ueber_mehrere_echte_zeilen_zaehlt():
+    evidence = 'config system snmp community\n    edit 1\n        set name "public"'
+    assert analyzer.parse_check(answer(evidence, True), RULE, FORTI_CONFIG) is not None
+
+
+def test_beleg_mit_einer_erfundenen_zeile_wird_verworfen():
+    evidence = 'config system snmp community\n    set name "erfunden"'
+    assert analyzer.parse_check(answer(evidence, True), RULE, FORTI_CONFIG) is None
+
+
 def test_gross_kleinschreibung_und_leerzeichen_sind_egal():
     evidence = "  USERNAME admin   privilege 15 secret 9 <entfernt> "
     assert analyzer.parse_check(answer(evidence, True), RULE, CONFIG) is not None
