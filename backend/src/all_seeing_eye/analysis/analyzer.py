@@ -264,12 +264,13 @@ def _normalize(text: str) -> str:
 
 def parse_check(text: str, rule: SecurityRule, chunk: str) -> DetectedFinding | None:
     """Wirft ValidationError, wenn die Antwort nicht zum Schema passt. Ein Verstoß zählt nur, wenn
-    evidence als ganze Zeile in der Konfiguration steht (sonst erfunden, oder nur ein Teil wie
-    "ip http server" aus "no ip http server")."""
+    jede Zeile von evidence als ganze Zeile in der Konfiguration steht (sonst erfunden, oder nur ein Teil
+    wie "ip http server" aus "no ip http server"). Mehrere Zeilen: FortiGate-Einstellungen stehen in Blöcken."""
     check = RuleCheck.model_validate_json(text)
     if not check.violated or not check.evidence.strip():     # ohne Beleg kein Befund
         return None
-    if _normalize(check.evidence) not in {_normalize(line) for line in chunk.splitlines()}:
+    config_lines = {_normalize(line) for line in chunk.splitlines()}
+    if not all(_normalize(line) in config_lines for line in check.evidence.splitlines() if line.strip()):
         logger.warning("Evidence für %s steht nicht in der Konfiguration, verworfen: %r", rule.code, check.evidence)
         return None
     return DetectedFinding(rule, "llm", check.evidence.strip(), check.reason.strip() or rule.title)
