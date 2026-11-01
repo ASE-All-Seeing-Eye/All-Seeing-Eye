@@ -178,7 +178,7 @@ function Details({ fund }) {
 
       <div style={{ marginTop: 16 }}>
         <div style={{ fontSize: 12, color: "#52525b", marginBottom: 6 }}>Handlungsempfehlung</div>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>{fund.recommendation}</div>
+        <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: "pre-wrap" }}>{fund.recommendation}</div>
       </div>
     </div>
   );
