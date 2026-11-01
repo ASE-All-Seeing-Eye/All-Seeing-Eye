@@ -178,7 +178,7 @@ def analyze_folder(folder: Path) -> analyzer.Assessment:
         print(f"\n  [{f.severity:<8}] {f.title}   (erkannt von: {source})")
         if f.evidence:
             print(f"     Beleg:      {f.evidence}")
-        print(f"     Empfehlung: {f.recommendation}")
+        print(f"     Empfehlung: {analyzer.recommendation_text(f.rule, vendor)}")
     if not result.findings:
         print("\n  Keine Befunde.")
     print()
