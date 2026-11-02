@@ -176,7 +176,8 @@ def build_request(session: Session, collection_id: int) -> AnalysisRequest:
              if rule_applies(r, device.vendor)]
     if not rules:
         # sonst würde das Gerät ungeprüft mit "OK" bewertet
-        raise ValueError(f"Keine SecurityRules für Hersteller {device.vendor!r}, Analyse übersprungen.")
+        raise ValueError(f"Keine SecurityRules für Hersteller {device.vendor!r}, Analyse übersprungen. "
+                         "Regeln eintragen mit: uv run python -m all_seeing_eye.analysis.rules")
 
     return AnalysisRequest(
         collection_id=collection.id, hostname=device.hostname or str(device.management_ip),
