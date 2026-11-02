@@ -6,8 +6,8 @@ from sqlalchemy import select
 
 from all_seeing_eye.analysis import analyzer
 from all_seeing_eye.analysis.commands import COMMANDS
-from all_seeing_eye.analysis.demo import DEMO_RULES
-from all_seeing_eye.database.models import Analysis, Finding
+from all_seeing_eye.analysis.rules import add_missing_rules, security_rules
+from all_seeing_eye.database.models import Analysis, Finding, SecurityRule
 from all_seeing_eye.settings import settings
 from conftest import make_collection, make_rule
 
@@ -73,13 +73,29 @@ def test_regel_ohne_befehle_behaelt_ihren_text(db, monkeypatch):
 
 @pytest.mark.parametrize("vendor", ["cisco", "fortinet"])
 def test_jede_regel_hat_befehle_fuer_ihre_hersteller(vendor):
-    missing = [r.code for r in DEMO_RULES if analyzer.rule_applies(r, vendor) and (r.code, vendor) not in COMMANDS]
+    missing = [r.code for r in security_rules()
+               if analyzer.rule_applies(r, vendor) and (r.code, vendor) not in COMMANDS]
     assert missing == []
 
 
 def test_befehle_gehoeren_zu_echten_regeln():
-    codes = {r.code for r in DEMO_RULES}
+    codes = {r.code for r in security_rules()}
     assert [key for key in COMMANDS if key[0] not in codes] == []
+
+
+def test_leere_datenbank_bekommt_alle_regeln(db):
+    assert len(add_missing_rules(db)) == 18
+    assert add_missing_rules(db) == []                                     # zweiter Lauf ändert nichts
+
+
+def test_vorhandene_regel_wird_nicht_ueberschrieben(db):
+    db.add(make_rule("LLM-01", check_value="angepasst"))
+    db.commit()
+
+    added = add_missing_rules(db)
+
+    assert "LLM-01" not in added and len(added) == 17
+    assert db.scalars(select(SecurityRule).where(SecurityRule.code == "LLM-01")).one().check_value == "angepasst"
 
 
 @pytest.mark.parametrize("wrong", [
