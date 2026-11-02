@@ -12,7 +12,8 @@ COMMANDS = {
                           "snmp-server group <GRUPPE> v3 priv\n"
                           "snmp-server user <BENUTZER> <GRUPPE> v3 auth sha <AUTH-PASSWORT> priv aes 128 <PRIV-PASSWORT>"),
     ("GEN-01", "cisco"): ("username <NEUER-ADMIN> privilege 15 algorithm-type scrypt secret <PASSWORT>\n"
-                          "! Erst mit dem neuen Konto anmelden und testen, dann:\nno username admin"),
+                          "! Erst mit dem neuen Konto anmelden und testen, dann (Rückfrage mit Enter bestätigen):\n"
+                          "no username admin"),
     ("GEN-02", "cisco"): "logging host <SYSLOG-IP>\nlogging trap informational",
     ("GEN-03", "cisco"): "banner login # <RECHTLICHER-HINWEIS> #",
     ("CIS-01", "cisco"): ("enable algorithm-type scrypt secret <PASSWORT>\nno enable password\n"
