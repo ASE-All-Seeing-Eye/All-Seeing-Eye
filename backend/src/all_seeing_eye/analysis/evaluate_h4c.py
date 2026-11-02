@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from all_seeing_eye.analysis import analyzer
-from all_seeing_eye.analysis.demo import DEMO_RULES
+from all_seeing_eye.analysis.rules import security_rules
 
 DATA_DIR = Path(__file__).resolve().parents[3] / "tests" / "data" / "h4c"
 
@@ -19,7 +19,7 @@ def find_rules(path: Path, use_llm: bool) -> set[str]:
     """Analysiert eine Config-Datei und gibt die Codes der gefundenen Regeln zurück."""
     vendor = "fortinet" if path.name.startswith("forti") else "cisco"
     config = path.read_text(encoding="utf-8")
-    rules = [r for r in DEMO_RULES if analyzer.rule_applies(r, vendor)]
+    rules = [r for r in security_rules() if analyzer.rule_applies(r, vendor)]
     regex_rules = [r for r in rules if r.check_type in analyzer.LOCAL_CHECKS]
     llm_rules = [r for r in rules if r not in regex_rules] if use_llm else []
     request = analyzer.AnalysisRequest(0, path.stem, vendor, "", regex_rules, llm_rules, config,
