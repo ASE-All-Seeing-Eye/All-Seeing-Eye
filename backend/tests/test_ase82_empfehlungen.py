@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import select
 
 from all_seeing_eye.analysis import analyzer
-from all_seeing_eye.analysis.commands import COMMANDS
+from all_seeing_eye.analysis.commands import COMMANDS, RISKS
 from all_seeing_eye.analysis.rules import add_missing_rules, security_rules
 from all_seeing_eye.database.models import Analysis, Finding, SecurityRule
 from all_seeing_eye.settings import settings
@@ -81,6 +81,28 @@ def test_jede_regel_hat_befehle_fuer_ihre_hersteller(vendor):
 def test_befehle_gehoeren_zu_echten_regeln():
     codes = {r.code for r in security_rules()}
     assert [key for key in COMMANDS if key[0] not in codes] == []
+
+
+def test_jede_regel_hat_genau_einen_risiko_satz():
+    assert set(RISKS) == {r.code for r in security_rules()}
+
+
+def test_llm_bekommt_den_festen_risiko_satz(db, monkeypatch):
+    collection_id = stored_collection(db, make_rule("GEN-01", "regex", check_value=r"^username admin"))
+    calls = fake_ollama(monkeypatch, [ADVICE])
+
+    analyzer.analyze_collection(collection_id)
+
+    assert f"Bekanntes Risiko: {RISKS['GEN-01']}" in calls[0]
+
+
+def test_ohne_llm_gilt_der_feste_risiko_satz(db, monkeypatch):
+    collection_id = stored_collection(db, make_rule("GEN-01", "regex", check_value=r"^username admin"))
+    fake_ollama(monkeypatch, [ConnectionError("Ollama nicht erreichbar")])
+
+    analyzer.analyze_collection(collection_id)
+
+    assert findings(db)["GEN-01"].reason == RISKS["GEN-01"]
 
 
 def test_leere_datenbank_bekommt_alle_regeln(db):
