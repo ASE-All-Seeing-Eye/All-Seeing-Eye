@@ -1,9 +1,30 @@
-"""Feste Befehle zu den Empfehlungen je Regel und Hersteller (ASE-82).
+"""Feste Risiko-Sätze je Regel und feste Befehle je Regel und Hersteller (ASE-82).
 
-Das LLM hat im Test auf der FortiGate Befehle erfunden, deshalb kommen sie von hier. Nur ein Vorschlag,
-wird nie automatisch auf ein Gerät gespielt. FortiGate-Einstellungen wurden mit "show full-configuration"
-von FortiOS 7.6.1 abgeglichen, die Cisco-Befehle gelten für IOS XE 17.6.
+Das LLM hat im Test auf der FortiGate Befehle und falsche Risiken erfunden, deshalb kommen beide von hier.
+Die Befehle sind nur ein Vorschlag und werden nie automatisch auf ein Gerät gespielt. FortiGate-Einstellungen
+wurden mit "show full-configuration" von FortiOS 7.6.1 abgeglichen, die Cisco-Befehle gelten für IOS XE 17.6.
 """
+
+RISKS = {
+    "LLM-01": "Telnet und HTTP übertragen Anmeldedaten unverschlüsselt, sie können im Netz mitgelesen werden.",
+    "LLM-02": "Die Communities public und private sind allgemein bekannt, damit lassen sich Gerätedaten per SNMP abfragen.",
+    "GEN-01": "Der Kontoname admin ist allgemein bekannt, bei Anmeldeversuchen muss nur noch das Passwort erraten werden.",
+    "GEN-02": "Ohne externen Syslog-Server liegen die Logs nur auf dem Gerät und können bei Angriff oder Ausfall verloren gehen.",
+    "GEN-03": "Ohne Banner fehlt der rechtliche Hinweis, dass nur Berechtigte zugreifen dürfen.",
+    "CIS-01": "Passwörter im Klartext oder mit Typ 7 lassen sich aus der Konfiguration lesen oder leicht zurückrechnen.",
+    "CIS-02": "Ohne diese Einstellung stehen manche Passwörter lesbar in der Konfiguration.",
+    "CIS-03": "Ohne AAA gibt es keine zentrale Anmeldung, Konten werden auf jedem Gerät einzeln verwaltet.",
+    "CIS-04": "Ohne Login-Sperre können beliebig viele Passwörter hintereinander ausprobiert werden.",
+    "CIS-05": "Ohne ACL ist die Anmeldung über VTY aus jedem erreichbaren Netz möglich.",
+    "CIS-06": "Ohne NTP können die Zeitstempel in den Logs falsch sein, das erschwert die Auswertung von Vorfällen.",
+    "CIS-07": "Ohne 'ip ssh version 2' ist das veraltete SSH Version 1 mit bekannten Schwächen möglich.",
+    "CIS-08": "Ohne Timeout bleiben unbeaufsichtigte Sitzungen offen und können von anderen weiterverwendet werden.",
+    "CIS-09": "CDP gibt Gerätetyp, Softwareversion und Adressen an direkt angeschlossene Geräte weiter.",
+    "FGT-01": "Ohne Trusthost sind Admin-Anmeldungen aus jedem erreichbaren Netz möglich.",
+    "FGT-02": "Ohne Richtlinie sind auch kurze und einfache Admin-Passwörter erlaubt.",
+    "FGT-03": "Nicht benötigte lokale Konten sind zusätzliche Angriffspunkte.",
+    "FGT-04": "Mit veralteten Signaturen werden neuere Malware und Angriffe nicht erkannt.",
+}
 
 COMMANDS = {
     # ---- Cisco IOS ----
