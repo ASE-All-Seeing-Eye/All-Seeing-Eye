@@ -15,3 +15,15 @@ export async function getTopology() {
   if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
   return res.json();
 }
+
+export async function getJobs() {
+  const res = await fetch("/api/analysis/jobs");
+  if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
+  return res.json();
+}
+
+export async function getJobAnalyse(jobId) {
+  const res = await fetch(`/api/analysis/jobs/${jobId}`);
+  if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
+  return res.json();
+}
