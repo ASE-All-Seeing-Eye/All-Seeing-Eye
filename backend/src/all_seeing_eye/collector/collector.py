@@ -97,6 +97,8 @@ ALLOWED_COMMANDS = (
     "show ip access-lists",
     "show access-lists",
     "show interfaces",
+    "show interface",           # NX-OS kennt nur die Einzahl
+
     "show vlan",
     "show mac address-table",
     "show spanning-tree",
@@ -110,6 +112,15 @@ DEFAULT_COMMANDS = (
     "show version",
     "show interfaces",
     "show interfaces switchport",
+    "show cdp neighbors detail",
+    "show lldp neighbors detail",
+    "show running-config",
+)
+
+NXOS_DEFAULT_COMMANDS = (
+    "show version",
+    "show interface",
+    "show interface switchport",
     "show cdp neighbors detail",
     "show lldp neighbors detail",
     "show running-config",
@@ -129,13 +140,26 @@ FORTINET_DEFAULT_COMMANDS = (
 
 DEFAULT_COMMANDS_BY_VENDOR = {
     "cisco": DEFAULT_COMMANDS,
+    "nxos": NXOS_DEFAULT_COMMANDS,
     "fortinet": FORTINET_DEFAULT_COMMANDS,
 }
 
+# Die komplette FortiGate-Konfiguration hat ~1 MB, 60 s reichen dafür auf der UCS nicht
+SLOW_COMMANDS = ("show full-configuration", "show running-config")
+SLOW_READ_TIMEOUT = 300
+
+# Syntaxfehler, mit denen das Gerät einen Befehl ablehnt. "% LLDP is not enabled" gehört nicht dazu:
+# Das ist eine gültige Antwort und heißt nur, dass die Funktion auf dem Gerät aus ist.
+REJECTED = re.compile(r"^\s*% ?(Invalid|Incomplete|Ambiguous)|^Command fail|command parse error|^Unknown action",
+                      re.MULTILINE | re.IGNORECASE)
+
 
 def vendor_of(device_type: str) -> str:
-    """Leitet aus dem Netmiko-Gerätetyp den Hersteller ab ('cisco' oder 'fortinet')."""
-    return "fortinet" if device_type.lower().startswith(("fortinet", "fortios")) else "cisco"
+    """Leitet aus dem Netmiko-Gerätetyp die Befehlsgruppe ab ('cisco', 'nxos' oder 'fortinet')."""
+    device_type = device_type.lower()
+    if device_type.startswith(("fortinet", "fortios")):
+        return "fortinet"
+    return "nxos" if device_type.startswith("cisco_nxos") else "cisco"
 
 
 CONSOLE_PROMPT = r"\S+#\s*$"
@@ -225,9 +249,18 @@ class ConfigCollector:
                         kwargs["expect_string"] = CONSOLE_PROMPT
                     for cmd in allowed:
                         try:
-                            output = conn.send_command(cmd, **kwargs)
-                            result.outputs[cmd] = RawConfig(host=device.host, config=output)
-                            self._audit(label, cmd, "OK")
+                            read_timeout = SLOW_READ_TIMEOUT if cmd in SLOW_COMMANDS else self.read_timeout
+                            output = conn.send_command(cmd, **{**kwargs, "read_timeout": read_timeout})
+                            rejected = REJECTED.search(output or "")
+                            if rejected:
+                                # Ausgabe bleibt gespeichert, damit man sieht, was das Gerät geantwortet hat
+                                line = output[rejected.start():].strip().splitlines()[0]
+                                result.outputs[cmd] = RawConfig(host=device.host, config=output,
+                                                                error=f"Vom Gerät abgelehnt: {line}")
+                                self._audit(label, cmd, "REJECTED")
+                            else:
+                                result.outputs[cmd] = RawConfig(host=device.host, config=output)
+                                self._audit(label, cmd, "OK")
                         except Exception as e:
                             msg = str(e).strip()
                             result.outputs[cmd] = RawConfig(
