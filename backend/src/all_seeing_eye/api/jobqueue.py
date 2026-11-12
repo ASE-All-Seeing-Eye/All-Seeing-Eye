@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from all_seeing_eye.analysis.analyzer import analyze_collection
 from all_seeing_eye.collector.collector import ConfigCollector, ConnectionSettings
 from all_seeing_eye.collector.repository import CollectionRepository, to_target, vendor_key
-from all_seeing_eye.collector.run_gns3 import COMMANDS, load_credentials
+from all_seeing_eye.collector.run import COMMANDS, load_credentials
 from all_seeing_eye.constants import Status
 from all_seeing_eye.database import repository
 from all_seeing_eye.database.models import Job
