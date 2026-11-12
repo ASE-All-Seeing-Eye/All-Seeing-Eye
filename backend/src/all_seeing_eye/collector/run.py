@@ -98,7 +98,7 @@ def main() -> None:
                     device_dir = OUTPUT_DIR / name
                     device_dir.mkdir(parents=True, exist_ok=True)
                     (device_dir / f"{safe_cmd}.txt").write_text(raw.config, encoding="utf-8")
-                elif raw.error:
+                if raw.error:
                     print(f"   {cmd}: {raw.error}")
             collections.append(repo.save_result(job, device, result))
 
