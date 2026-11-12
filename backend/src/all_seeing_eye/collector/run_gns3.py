@@ -42,6 +42,14 @@ CISCO_COMMANDS = [
     "show lldp neighbors detail",
     "show running-config",
 ]
+NXOS_COMMANDS = [
+    "show version",
+    "show interface",                    # NX-OS: Einzahl, "show interfaces" ist ungültig
+    "show interface switchport",
+    "show cdp neighbors detail",
+    "show lldp neighbors detail",        # braucht "feature lldp" auf dem Gerät
+    "show running-config",
+]
 FORTINET_COMMANDS = [
     "get system status",
     "get hardware status",
@@ -50,7 +58,7 @@ FORTINET_COMMANDS = [
     "get system interface physical",
     "show full-configuration",           # komplette Konfiguration inkl. Standardwerte
 ]
-COMMANDS = {"cisco": CISCO_COMMANDS, "fortinet": FORTINET_COMMANDS}
+COMMANDS = {"cisco": CISCO_COMMANDS, "nxos": NXOS_COMMANDS, "fortinet": FORTINET_COMMANDS}
 # -----------------------------------------
 
 
