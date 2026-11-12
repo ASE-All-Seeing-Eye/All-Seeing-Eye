@@ -1,8 +1,3 @@
-"""Die Sicherheitsregeln von All Seeing Eye. Der Analyzer liest sie aus der Tabelle securityrule, von hier kommen sie hinein.
-
-Fehlende Regeln eintragen (im Ordner backend), vorhandene bleiben unverändert:
-    uv run python -m all_seeing_eye.analysis.rules
-"""
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,7 +5,6 @@ from all_seeing_eye.database.models import SecurityRule
 from all_seeing_eye.database.session import SessionFactory
 
 _RULES = [
-    # ---- werden von Ollama geprüft ----
     ("LLM-01", "Unverschlüsselte Verwaltung (Telnet/HTTP)", "Management", "HIGH", "all", "llm",
      "Telnet oder HTTP ohne s ist als Verwaltungszugang erlaubt (z. B. 'transport input telnet', "
      "'ip http server', 'set allowaccess ... http' oder '... telnet', 'set admin-telnet enable'). "
@@ -20,7 +14,6 @@ _RULES = [
      "SNMP-Community heißt 'public' oder 'private'",
      "Eigene Community bzw. SNMPv3 verwenden"),
 
-    # ---- werden direkt in Python geprüft: alle Hersteller ----
     ("GEN-01", "Standard-Administratorkonto 'admin'", "Authentifizierung", "MEDIUM", "all", "regex",
      r'^username admin\b|(?<=config system admin\n)\s*edit "admin"',
      "Personalisierte Admin-Konten anlegen und 'admin' deaktivieren"),
@@ -31,7 +24,6 @@ _RULES = [
      r"^banner (login|motd)|set pre-login-banner enable",
      "Login-Banner mit rechtlichem Hinweis konfigurieren"),
 
-    # ---- Cisco IOS ----
     ("CIS-01", "Passwörter im Klartext oder mit Typ 7", "Authentifizierung", "HIGH", "cisco", "regex",
      r"^enable password|^username \S+ .*password (0|7) ",
      "'enable secret' bzw. 'username ... secret' (Typ 8/9) verwenden"),
@@ -57,9 +49,8 @@ _RULES = [
      r"^Device ID|Total cdp entries displayed",
      "CDP auf Interfaces zu nicht vertrauenswürdigen Netzen deaktivieren"),
 
-    # ---- FortiGate ----
     ("FGT-01", "Admin-Zugriff nicht auf vertrauenswürdige Hosts beschränkt", "Management", "MEDIUM",
-     "fortinet", "not_regex", r"set trusthost\d+ (?!0\.0\.0\.0 0\.0\.0\.0)",   # 0.0.0.0 = Standard, alles erlaubt
+     "fortinet", "not_regex", r"set trusthost\d+ (?!0\.0\.0\.0 0\.0\.0\.0)",
      "Beim Admin-Konto 'set trusthost1 <Management-Netz>' setzen"),
     ("FGT-02", "Keine Passwort-Richtlinie für Admins", "Authentifizierung", "MEDIUM", "fortinet",
      "not_regex", r"config system password-policy\s*\n(\s+set .*\n)*?\s+set status enable",
@@ -73,7 +64,6 @@ _RULES = [
 
 
 def security_rules() -> list[SecurityRule]:
-    """Jeder Aufruf gibt neue Objekte zurück, die noch zu keiner Session gehören."""
     return [SecurityRule(code=code, title=title, category=category, severity=severity, vendor=vendor,
                          check_type=check_type, check_value=check_value, recommendation=recommendation,
                          source="All Seeing Eye")
@@ -81,7 +71,6 @@ def security_rules() -> list[SecurityRule]:
 
 
 def add_missing_rules(session: Session) -> list[str]:
-    """Trägt fehlende Regeln ein und gibt ihre Codes zurück. Vorhandene Regeln werden nie überschrieben."""
     existing = set(session.scalars(select(SecurityRule.code)))
     missing = [rule for rule in security_rules() if rule.code not in existing]
     session.add_all(missing)

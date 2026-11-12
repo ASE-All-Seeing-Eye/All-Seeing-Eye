@@ -1,4 +1,3 @@
-
 import logging
 import re
 import time
@@ -16,30 +15,28 @@ logger = logging.getLogger(__name__)
 audit_logger = logging.getLogger("collector.audit")
 
 
-
 class SSHAuthenticationError(Exception):
-    """Benutzername oder Passwort falsch."""
+    pass
 
 
 class SSHUnreachableError(Exception):
-    """Gerät nicht erreichbar (Timeout)."""
+    pass
 
 
 class SSHConnectionClosedError(Exception):
-    """Gerät nimmt die Verbindung an, schließt sie aber sofort wieder (z. B. SSH auf den vty-Leitungen nicht erlaubt)."""
+    pass
 
 
 @dataclass
 class ConnectionSettings:
     retries: int = 2
     retry_delay: float = 3.0
-    timeout: int = 30           # FortiGate-VM braucht bei ausgelasteter UCS oft länger als 15 s
+    timeout: int = 30
     strict_host_key: bool = False
     allow_telnet: bool = False
 
 
 def open_connection(device: SSHTarget, settings: ConnectionSettings | None = None):
-    """Öffnet eine SSH-Verbindung (Telnet nur mit allow_telnet=True) und gibt das Netmiko-Objekt zurück."""
     settings = settings or ConnectionSettings()
 
     params = {k: v for k, v in asdict(device).items() if v is not None}
@@ -65,7 +62,6 @@ def open_connection(device: SSHTarget, settings: ConnectionSettings | None = Non
             raise SSHAuthenticationError(f"{device.host}: Authentifizierung fehlgeschlagen") from e
         except NetmikoTimeoutException as e:
             last_error = e
-            # "Error reading SSH protocol banner": TCP steht, das Gerät schließt sofort wieder
             closed_by_device = "banner" in str(e).lower()
             logger.warning("%s: Timeout (Versuch %d)", device.host, attempt)
             if attempt <= settings.retries:
@@ -74,7 +70,6 @@ def open_connection(device: SSHTarget, settings: ConnectionSettings | None = Non
     if closed_by_device:
         raise SSHConnectionClosedError(f"{device.host}: Gerät hat die SSH-Verbindung sofort geschlossen") from last_error
     raise SSHUnreachableError(f"{device.host}: Gerät nicht erreichbar") from last_error
-
 
 
 ALLOWED_COMMANDS = (
@@ -97,7 +92,7 @@ ALLOWED_COMMANDS = (
     "show ip access-lists",
     "show access-lists",
     "show interfaces",
-    "show interface",           # NX-OS kennt nur die Einzahl
+    "show interface",
 
     "show vlan",
     "show mac address-table",
@@ -144,18 +139,14 @@ DEFAULT_COMMANDS_BY_VENDOR = {
     "fortinet": FORTINET_DEFAULT_COMMANDS,
 }
 
-# Die komplette FortiGate-Konfiguration hat ~1 MB, 60 s reichen dafür auf der UCS nicht
 SLOW_COMMANDS = ("show full-configuration", "show running-config")
 SLOW_READ_TIMEOUT = 300
 
-# Syntaxfehler, mit denen das Gerät einen Befehl ablehnt. "% LLDP is not enabled" gehört nicht dazu:
-# Das ist eine gültige Antwort und heißt nur, dass die Funktion auf dem Gerät aus ist.
 REJECTED = re.compile(r"^\s*% ?(Invalid|Incomplete|Ambiguous)|^Command fail|command parse error|^Unknown action",
                       re.MULTILINE | re.IGNORECASE)
 
 
 def vendor_of(device_type: str) -> str:
-    """Leitet aus dem Netmiko-Gerätetyp die Befehlsgruppe ab ('cisco', 'nxos' oder 'fortinet')."""
     device_type = device_type.lower()
     if device_type.startswith(("fortinet", "fortios")):
         return "fortinet"
@@ -190,7 +181,6 @@ class ConfigCollector:
 
     @staticmethod
     def is_allowed(command: str, vendor: str = "cisco") -> bool:
-        """Prüft, ob ein Befehl in der Whitelist steht und keine Tricks enthält."""
         if any(c in command for c in ("\n", "\r", ";")):
             return False
         if vendor == "fortinet":
@@ -211,8 +201,6 @@ class ConfigCollector:
 
     def collect_device(self, device: SSHTarget,
                        commands: tuple[str, ...] | list[str] | dict | None = None) -> CollectionResult:
-        """commands: None = Standardbefehle des Herstellers, Liste = für dieses Gerät,
-        Dictionary = Befehle je Hersteller, z. B. {"cisco": [...], "fortinet": [...]}."""
         start = time.monotonic()
         label = f"{device.host}:{device.port}"
         vendor = vendor_of(device.device_type)
@@ -253,7 +241,6 @@ class ConfigCollector:
                             output = conn.send_command(cmd, **{**kwargs, "read_timeout": read_timeout})
                             rejected = REJECTED.search(output or "")
                             if rejected:
-                                # Ausgabe bleibt gespeichert, damit man sieht, was das Gerät geantwortet hat
                                 line = output[rejected.start():].strip().splitlines()[0]
                                 result.outputs[cmd] = RawConfig(host=device.host, config=output,
                                                                 error=f"Vom Gerät abgelehnt: {line}")
@@ -287,7 +274,6 @@ class ConfigCollector:
 
     @staticmethod
     def _set_hostname(result: CollectionResult, vendor: str = "cisco") -> None:
-        """Liest den Hostnamen aus der Config (oder Statusausgabe) und korrigiert den Prompt."""
         if vendor == "fortinet":
             patterns = (("get system status", r"^Hostname\s*:\s*(\S+)"),
                         ("show full-configuration", r'^\s*set hostname "?([^"\s]+)"?'))
@@ -307,7 +293,6 @@ class ConfigCollector:
 
     def collect_many(self, devices: list[SSHTarget],
                      commands: tuple[str, ...] | list[str] | dict | None = None) -> list[CollectionResult]:
-        """Mehrere Geräte parallel abfragen."""
         results = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
             futures = [pool.submit(self.collect_device, d, commands) for d in devices]

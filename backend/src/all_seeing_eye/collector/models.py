@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 @dataclass
 class SSHTarget:
-    """Verbindungsdaten für Netmiko. Wird zur Laufzeit aus database.models.Device gebaut und nie gespeichert."""
     device_type: str
     host: str
     username: str | None = None

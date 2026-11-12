@@ -1,15 +1,3 @@
-"""Analysiert eine vom Collector gespeicherte Collection (ASE-78 bis ASE-82).
-
-1. Anfrage bauen: Ausgaben und passende SecurityRules laden, Geheimnisse schwärzen (ASE-78)
-2. regex/contains-Regeln in Python prüfen, alle anderen Regeln mit Ollama (ASE-79)
-3. LLM-Antwort gegen Schema und Konfiguration prüfen (ASE-80)
-4. Findings sortieren und bewerten, Analysis und Finding speichern (ASE-81)
-5. Begründung je Finding vom LLM, Empfehlung mit festen Befehlen aus commands.py (ASE-82)
-
-Start (im Ordner backend):
-    uv run python -m all_seeing_eye.analysis.analyzer          # neueste Collection je Gerät
-    uv run python -m all_seeing_eye.analysis.analyzer 4 7      # bestimmte collection_ids
-"""
 import argparse
 import logging
 import re
@@ -28,17 +16,15 @@ from all_seeing_eye.settings import settings
 
 logger = logging.getLogger(__name__)
 
-MAX_CHARS = 24_000      # pro LLM-Anfrage, ca. 7000 Tokens
-NUM_CTX = 16_384        # sonst schneidet Ollama lange Anfragen ohne Fehlermeldung ab
+MAX_CHARS = 24_000
+NUM_CTX = 16_384
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 SEVERITY_PENALTY = {"CRITICAL": 40, "HIGH": 20, "MEDIUM": 10, "LOW": 5}
-LOCAL_CHECKS = {"regex", "not_regex", "contains", "not_contains"}   # werden ohne LLM geprüft
-ALL_VENDORS = {"", "all", "any", "*"}                              # SecurityRule.vendor für alle Hersteller
+LOCAL_CHECKS = {"regex", "not_regex", "contains", "not_contains"}
+ALL_VENDORS = {"", "all", "any", "*"}
 
-# Ans LLM geht nur die Konfiguration. Mit allen Ausgaben (ACLs, CDP ...) hat llama3.1:8b im Test Zeilen übersehen.
 LLM_SECTIONS = {"show running-config", "show running config", "show", "show full-configuration"}
 
-# FortiGate "show" hat ~300.000 Zeichen, fast nur Standard-Datenbanken. Ans LLM gehen nur diese Blöcke.
 FORTINET_BLOCKS = (
     "config system global", "config system admin", "config system accprofile", "config system interface",
     "config system password-policy", "config system snmp", "config system ntp", "config system dns",
@@ -47,7 +33,6 @@ FORTINET_BLOCKS = (
     "config firewall policy", "config router", "config user", "config vpn ipsec",
 )
 
-# Wert nach dem Schlüsselwort wird geschwärzt, der Typ (ENC, 5, 7, 9) bleibt sichtbar. [ \t] statt \s: nie über das Zeilenende.
 _SECRET = re.compile(r"\b(password|passwd|secret|psksecret|key-string|community|auth-pwd|priv-pwd)\b"
                      r"([ \t]+(?:ENC|\d))?[ \t]+(\"[^\"]*\"|\S+)", re.IGNORECASE)
 
@@ -74,17 +59,13 @@ ADVICE_PROMPT = (
 
 
 class Advice(BaseModel):
-    """Antwort des LLM zu einem Finding. Nur die Begründung: Befehle hat gpt-oss im Test erfunden."""
     model_config = ConfigDict(str_strip_whitespace=True)
     reason: str = Field(min_length=1, description="Ein Satz: warum ist das auf diesem Gerät ein Risiko")
 
 
 class RuleCheck(BaseModel):
-    """Antwort des LLM zu einer Regel. Reihenfolge ist Absicht: erst die Zeile suchen, dann entscheiden,
-    sonst antwortet llama3.1:8b oft pauschal violated=false."""
     evidence: str = Field(description="Relevanteste Zeile, wörtlich kopiert; leer, wenn es keine gibt")
     violated: bool = Field(description="true nur, wenn die evidence-Zeile die Regel verletzt")
-    # Standardwert: gpt-oss lässt reason bei violated=false manchmal weg, die Antwort ist trotzdem eindeutig
     reason: str = Field("", description="Ein Satz zur Begründung")
 
 
@@ -96,13 +77,7 @@ def rule_applies(rule: SecurityRule, vendor: str | None) -> bool:
     return (rule.vendor or "").strip().lower() in ALL_VENDORS or vendor_key(rule.vendor) == vendor_key(vendor)
 
 
-# ---------------------------------------------------------------------------
-# ASE-78: Analyseanfrage mit Konfigurationsdaten erstellen
-# ---------------------------------------------------------------------------
-
 def redact(text: str) -> str:
-    """Entfernt Passwörter, Hashes und SNMP-Communities. public/private bleiben sichtbar:
-    das sind bekannte Standardwerte, kein Geheimnis, und das LLM soll sie als Fehler erkennen."""
     def replace(m: re.Match) -> str:
         if m.group(1).lower() == "community" and m.group(3).strip('"').lower() in ("public", "private"):
             return m.group(0)
@@ -111,7 +86,6 @@ def redact(text: str) -> str:
 
 
 def trim_fortinet_config(text: str) -> str:
-    """Behält aus einer FortiGate-Konfiguration nur die config-Blöcke aus FORTINET_BLOCKS."""
     kept, block = [], []
     for line in text.splitlines():
         if block:
@@ -123,12 +97,11 @@ def trim_fortinet_config(text: str) -> str:
         elif line.startswith("config "):
             block = [line]
         else:
-            kept.append(line)      # Kopfzeilen wie #config-version
+            kept.append(line)
     return "\n".join(kept)
 
 
 def prepare_llm_chunks(sections: list[tuple[str, str]], vendor: str | None) -> list[str]:
-    """Nur die Konfiguration (sonst alle Ausgaben), geschwärzt und in Blöcke unter MAX_CHARS geteilt."""
     selected = [(n, o) for n, o in sections if n.lower() in LLM_SECTIONS] or sections
     fortinet = vendor_key(vendor) == "fortinet"
     text = "".join(f"### {n}\n{redact(trim_fortinet_config(o) if fortinet and n in ('show', 'show full-configuration') else o)}\n"
@@ -150,12 +123,10 @@ class AnalysisRequest:
     os_version: str
     local_rules: list[SecurityRule]
     llm_rules: list[SecurityRule]
-    raw_content: str            # ungeschwärzt, alle Ausgaben, für die lokalen Regeln
-    chunks: list[str]           # geschwärzt, nur Konfiguration, für das LLM
+    raw_content: str
+    chunks: list[str]
 
     def messages(self, chunk: str, rule: SecurityRule) -> list[dict]:
-        # Konfiguration vor der Regel: Der Anfang ist dann für alle Regeln eines Geräts gleich,
-        # Ollama kann ihn aus dem Cache nehmen und muss die Konfiguration nur einmal lesen
         user = (f"Gerät: {self.hostname} (Hersteller: {self.vendor}, Version: {self.os_version or 'unbekannt'})\n\n"
                 f"Konfiguration:\n{chunk}\n\nRegel: {rule.title}\nHinweis: {rule.check_value}")
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
@@ -177,7 +148,6 @@ def build_request(session: Session, collection_id: int) -> AnalysisRequest:
     rules = [r for r in session.scalars(select(SecurityRule).order_by(SecurityRule.code))
              if rule_applies(r, device.vendor)]
     if not rules:
-        # sonst würde das Gerät ungeprüft mit "OK" bewertet
         raise ValueError(f"Keine SecurityRules für Hersteller {device.vendor!r}, Analyse übersprungen. "
                          "Regeln eintragen mit: uv run python -m all_seeing_eye.analysis.rules")
 
@@ -190,17 +160,13 @@ def build_request(session: Session, collection_id: int) -> AnalysisRequest:
         chunks=prepare_llm_chunks(sections, device.vendor))
 
 
-# ---------------------------------------------------------------------------
-# Lokale Regelprüfung (ohne LLM)
-# ---------------------------------------------------------------------------
-
 @dataclass
 class DetectedFinding:
     rule: SecurityRule
-    detected_by: str            # "rule" oder "llm"
+    detected_by: str
     evidence: str | None
     description: str
-    advice: Advice | None = None    # ohne Antwort vom LLM gilt der feste Risiko-Satz
+    advice: Advice | None = None
 
     @property
     def severity(self) -> str:
@@ -221,7 +187,6 @@ class DetectedFinding:
 
 
 def check_rules(content: str, rules: list[SecurityRule]) -> list[DetectedFinding]:
-    """regex/contains: Treffer ist ein Finding. not_regex/not_contains: fehlender Treffer ist ein Finding."""
     findings = []
     for rule in rules:
         check_type = rule.check_type.lower()
@@ -239,36 +204,21 @@ def check_rules(content: str, rules: list[SecurityRule]) -> list[DetectedFinding
     return findings
 
 
-# ---------------------------------------------------------------------------
-# ASE-79: Ollama-Anbindung
-# ---------------------------------------------------------------------------
-
 def ask_llm(messages: list[dict], schema: type[BaseModel] = RuleCheck) -> str:
-    """Schickt eine Anfrage an Ollama und gibt den rohen Antworttext zurück."""
     client = Client(host=settings.ollama_host, timeout=settings.ollama_timeout)
-    # think=False: Modelle wie qwen3.5 schreiben sonst erst lange Überlegungen (im Test 43 s statt 1 s
-    # für eine Mini-Antwort), llama3.1 ignoriert es. gpt-oss kann nicht abschalten und denkt mit False
-    # sogar endlos ohne Antwort, mit "low" nur ~100 Tokens. num_predict: Notbremse, falls es doch hängt.
     think = "low" if "gpt-oss" in settings.ollama_model else False
     response = client.chat(model=settings.ollama_model, messages=messages, format=schema.model_json_schema(),
                            options={"temperature": 0, "num_ctx": NUM_CTX, "num_predict": 1000}, think=think)
     return response.message.content
 
 
-# ---------------------------------------------------------------------------
-# ASE-80: LLM-Ausgaben verarbeiten und auf Struktur prüfen
-# ---------------------------------------------------------------------------
-
 def _normalize(text: str) -> str:
     return " ".join(text.lower().split())
 
 
 def parse_check(text: str, rule: SecurityRule, chunk: str) -> DetectedFinding | None:
-    """Wirft ValidationError, wenn die Antwort nicht zum Schema passt. Ein Verstoß zählt nur, wenn
-    jede Zeile von evidence als ganze Zeile in der Konfiguration steht (sonst erfunden, oder nur ein Teil
-    wie "ip http server" aus "no ip http server"). Mehrere Zeilen: FortiGate-Einstellungen stehen in Blöcken."""
     check = RuleCheck.model_validate_json(text)
-    if not check.violated or not check.evidence.strip():     # ohne Beleg kein Befund
+    if not check.violated or not check.evidence.strip():
         return None
     config_lines = {_normalize(line) for line in chunk.splitlines()}
     if not all(_normalize(line) in config_lines for line in check.evidence.splitlines() if line.strip()):
@@ -278,8 +228,6 @@ def parse_check(text: str, rule: SecurityRule, chunk: str) -> DetectedFinding | 
 
 
 def run_llm(request: AnalysisRequest) -> list[DetectedFinding]:
-    """Eine Anfrage pro Regel und Block: Mit mehreren Regeln pro Anfrage hat llama3.1:8b Belege
-    der falschen Regel zugeordnet."""
     findings = []
     for rule in request.llm_rules:
         for number, chunk in enumerate(request.chunks, start=1):
@@ -294,26 +242,21 @@ def run_llm(request: AnalysisRequest) -> list[DetectedFinding]:
                 raise RuntimeError(f"{request.hostname} {rule.code} Teil {number}: keine gültige LLM-Antwort")
             if finding:
                 findings.append(finding)
-                break       # Regel verletzt, die restlichen Blöcke braucht es nicht mehr
+                break
     return findings
 
-
-# ---------------------------------------------------------------------------
-# ASE-81: Befund bewerten und priorisieren
-# ---------------------------------------------------------------------------
 
 @dataclass
 class Assessment:
     collection_id: int
     hostname: str
-    rating: str                 # schlechteste Schwere oder "OK"
-    score: int                  # 100 = keine Findings
+    rating: str
+    score: int
     counts: dict[str, int]
     findings: list[DetectedFinding] = field(default_factory=list)
 
 
 def assess(collection_id: int, hostname: str, findings: list[DetectedFinding]) -> Assessment:
-    """Ein Finding pro Regel (lokale Prüfung hat Vorrang), nach Schwere sortiert, mit Score."""
     unique: dict[str, DetectedFinding] = {}
     for f in findings:
         if f.rule.code not in unique or f.detected_by == "rule":
@@ -324,19 +267,12 @@ def assess(collection_id: int, hostname: str, findings: list[DetectedFinding]) -
     return Assessment(collection_id, hostname, ordered[0].severity if ordered else "OK", score, counts, ordered)
 
 
-# ---------------------------------------------------------------------------
-# ASE-82: Begründung passend zum Gerät, Empfehlung mit festen Befehlen
-# ---------------------------------------------------------------------------
-
 def recommendation_text(rule: SecurityRule, vendor: str | None) -> str:
-    """Empfehlung aus der Regel, dazu die festen Befehle für diesen Hersteller, falls es welche gibt."""
     commands = COMMANDS.get((rule.code, vendor_key(vendor)))
     return f"{rule.recommendation}\n\nBefehle:\n{commands}" if commands else rule.recommendation
 
 
 def add_advice(request: AnalysisRequest, findings: list[DetectedFinding]) -> None:
-    """Fragt das LLM pro Finding. Die Befunde stehen schon fest, deshalb bricht die Analyse hier nie ab:
-    Ohne gültige Antwort bleibt der feste Risiko-Satz."""
     for f in findings:
         user = (f"Gerät: {request.hostname} (Hersteller: {request.vendor}, "
                 f"Version: {request.os_version or 'unbekannt'})\n"
@@ -348,17 +284,12 @@ def add_advice(request: AnalysisRequest, findings: list[DetectedFinding]) -> Non
                 ask_llm([{"role": "system", "content": ADVICE_PROMPT}, {"role": "user", "content": user}], Advice))
         except ValidationError as e:
             logger.warning("%s %s: ungültige Begründung vom LLM: %s", request.hostname, f.rule.code, e.errors()[0]["msg"])
-        except Exception as e:      # Ollama aus oder Timeout: nicht bei jedem weiteren Finding nochmal warten
+        except Exception as e:
             logger.warning("%s: keine Begründungen vom LLM: %s", request.hostname, e)
             return
 
 
-# ---------------------------------------------------------------------------
-# Ablauf
-# ---------------------------------------------------------------------------
-
 def analyze_collection(collection_id: int) -> Assessment:
-    """Komplette Analyse einer Collection, speichert Analysis und Findings."""
     with SessionFactory() as session:
         request = build_request(session, collection_id)
         analysis = Analysis(collection_id=collection_id, status="running",
@@ -390,7 +321,6 @@ def analyze_collection(collection_id: int) -> Assessment:
 
 
 def latest_collection_ids(session: Session) -> list[int]:
-    """Neueste erfolgreiche (ok oder partial) Collection je Gerät."""
     return sorted(session.scalars(select(func.max(Collection.id))
                                   .where(Collection.status.in_(("ok", "partial")))
                                   .group_by(Collection.device_id)))

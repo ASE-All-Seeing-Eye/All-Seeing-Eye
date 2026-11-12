@@ -1,9 +1,3 @@
-"""Nachweis H4c/H6b: mindestens 8 von 10 Fehlern erkannt, höchstens 1 Fehlalarm bei 5 sauberen Configs.
-
-Start (im Ordner backend):
-    uv run python -m all_seeing_eye.analysis.evaluate_h4c             # mit LLM, ca. 1 Stunde
-    uv run python -m all_seeing_eye.analysis.evaluate_h4c --ohne-llm  # nur Regex, ohne UCS
-"""
 import json
 import logging
 import sys
@@ -16,7 +10,6 @@ DATA_DIR = Path(__file__).resolve().parents[3] / "tests" / "data" / "h4c"
 
 
 def find_rules(path: Path, use_llm: bool) -> set[str]:
-    """Analysiert eine Config-Datei und gibt die Codes der gefundenen Regeln zurück."""
     vendor = "fortinet" if path.name.startswith("forti") else "cisco"
     config = path.read_text(encoding="utf-8")
     rules = [r for r in security_rules() if analyzer.rule_applies(r, vendor)]
@@ -39,10 +32,10 @@ def main() -> None:
             print(f"{path.name:<32} übersprungen (braucht LLM)")
             continue
         found = find_rules(path, use_llm)
-        if rule:                                   # fehlerhafte Config: Fehler muss gefunden werden
+        if rule:
             detected += rule in found
             print(f"{path.name:<32} {'erkannt' if rule in found else 'NICHT erkannt'}")
-        else:                                      # saubere Config: es darf nichts gefunden werden
+        else:
             false_alarms += bool(found)
             print(f"{path.name:<32} {'FEHLALARM ' + ', '.join(found) if found else 'ok'}")
 

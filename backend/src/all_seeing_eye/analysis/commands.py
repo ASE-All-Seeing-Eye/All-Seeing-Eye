@@ -1,10 +1,3 @@
-"""Feste Risiko-Sätze je Regel und feste Befehle je Regel und Hersteller (ASE-82).
-
-Das LLM hat im Test auf der FortiGate Befehle und falsche Risiken erfunden, deshalb kommen beide von hier.
-Die Befehle sind nur ein Vorschlag und werden nie automatisch auf ein Gerät gespielt. FortiGate-Einstellungen
-wurden mit "show full-configuration" von FortiOS 7.6.1 abgeglichen, die Cisco-Befehle gelten für IOS XE 17.6.
-"""
-
 RISKS = {
     "LLM-01": "Telnet und HTTP übertragen Anmeldedaten unverschlüsselt, sie können im Netz mitgelesen werden.",
     "LLM-02": "Die Communities public und private sind allgemein bekannt, damit lassen sich Gerätedaten per SNMP abfragen.",
@@ -27,7 +20,6 @@ RISKS = {
 }
 
 COMMANDS = {
-    # ---- Cisco IOS ----
     ("LLM-01", "cisco"): "line vty 0 4\n transport input ssh\nexit\nno ip http server\nip http secure-server",
     ("LLM-02", "cisco"): ("no snmp-server community public\nno snmp-server community private\n"
                           "snmp-server group <GRUPPE> v3 priv\n"
@@ -50,7 +42,6 @@ COMMANDS = {
     ("CIS-08", "cisco"): "line vty 0 4\n exec-timeout 10 0\nline con 0\n exec-timeout 10 0",
     ("CIS-09", "cisco"): "interface <INTERFACE>\n no cdp enable",
 
-    # ---- FortiGate ----
     ("LLM-01", "fortinet"): ("config system interface\n    edit <INTERFACE>\n        set allowaccess ping https ssh\n"
                              "    next\nend\nconfig system global\n    set admin-telnet disable\nend"),
     ("LLM-02", "fortinet"): "config system snmp community\n    delete <ID>\nend\n# Danach SNMPv3 unter 'config system snmp user' einrichten",

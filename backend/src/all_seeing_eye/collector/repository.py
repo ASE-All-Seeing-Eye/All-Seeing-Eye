@@ -11,17 +11,14 @@ from .models import Credentials, SSHTarget
 
 DEVICE_TYPES = {"cisco": "cisco_ios", "nxos": "cisco_nxos", "fortinet": "fortinet"}
 
-# Dieser Befehl liefert die eigentliche Konfiguration und landet zusätzlich in Configuration
 CONFIG_COMMANDS = {"cisco": "show running-config", "fortinet": "show full-configuration"}
 
 
 def vendor_key(vendor: str | None) -> str:
-    """Bringt den Hersteller aus der DB auf 'cisco' oder 'fortinet'."""
     return "fortinet" if "forti" in (vendor or "").lower() else "cisco"
 
 
 def to_target(device: Device, credentials: Credentials) -> SSHTarget:
-    # os_type setzt der Parser nach dem ersten Lauf. Bis dahin wird ein Nexus wie IOS abgefragt.
     platform = "nxos" if (device.os_type or "").lower() == "nxos" else vendor_key(device.vendor)
     return SSHTarget(
         device_type=DEVICE_TYPES[platform],
@@ -33,7 +30,6 @@ def to_target(device: Device, credentials: Credentials) -> SSHTarget:
 
 
 def collection_status(result: CollectionResult) -> str:
-    """ok = alles geklappt, partial = verbunden, aber einzelne Befehle fehlgeschlagen, failed = keine Verbindung."""
     if result.error:
         return "failed"
     return "ok" if result.success else "partial"
@@ -53,8 +49,6 @@ class CollectionRepository:
         return job
 
     def save_result(self, job: Job, device: Device, result: CollectionResult) -> Collection:
-        """Speichert einen Lauf als Collection mit einer Command-Zeile pro Befehl
-        und der Konfiguration (show running-config bzw. show) als Configuration."""
         if result.hostname:
             device.hostname = result.hostname
 
@@ -75,7 +69,6 @@ class CollectionRepository:
             collection.configuration = Configuration(content=config.config, parse_status="pending")
 
         self.session.flush()
-        # H1a: jeder Anmeldeversuch landet im Audit-Log, fehlgeschlagene mit Grund (Passwort falsch, Timeout ...)
         self.session.add(AuditLog(actor=Actor.COLLECTOR, action=Action.DEVICE_LOGIN, object_type="device",
                                   object_id=device.id, result=Status.FAILED if result.error else Status.OK,
                                   message=f"{device.management_ip}: {result.error or 'Anmeldung erfolgreich'}"))

@@ -1,9 +1,3 @@
-"""Liest alle Geräte aus der Datenbank aus und speichert die Ausgaben als Job mit einer
-Collection pro Gerät (Command pro Befehl, Konfiguration zusätzlich als Configuration).
-
-Start (im Ordner backend):
-    uv run python -m all_seeing_eye.collector.run
-"""
 import logging
 import re
 from pathlib import Path
@@ -18,8 +12,6 @@ from all_seeing_eye.collector.collector import ConfigCollector, ConnectionSettin
 from all_seeing_eye.collector.models import Credentials
 from all_seeing_eye.collector.repository import CollectionRepository, to_target, vendor_key
 
-# ---- An deine Konfiguration anpassen ----
-# Die SSH-Zugangsdaten stehen in backend/.env (CISCO_SSH_USERNAME, CISCO_SSH_PASSWORD, ...)
 
 LAB_DEVICES = [
     ("FortiGate-1", "fortinet", "10.50.20.1"),
@@ -29,10 +21,8 @@ LAB_DEVICES = [
     ("CAT-02", "cisco", "10.50.10.22"),
 ]
 
-OUTPUT_DIR = Path("gns3_output")   # zusätzlich als .txt, zum Nachschauen
+OUTPUT_DIR = Path("gns3_output")
 
-# Diese Befehle werden je Hersteller ausgeführt (nur Befehle aus der Whitelist
-# im Collector sind erlaubt), nicht benötigte Zeilen einfach auskommentieren.
 CISCO_COMMANDS = [
     "show version",
     "show interfaces",
@@ -43,10 +33,10 @@ CISCO_COMMANDS = [
 ]
 NXOS_COMMANDS = [
     "show version",
-    "show interface",                    # NX-OS: Einzahl, "show interfaces" ist ungültig
+    "show interface",
     "show interface switchport",
     "show cdp neighbors detail",
-    "show lldp neighbors detail",        # braucht "feature lldp" auf dem Gerät
+    "show lldp neighbors detail",
     "show running-config",
 ]
 FORTINET_COMMANDS = [
@@ -55,14 +45,12 @@ FORTINET_COMMANDS = [
     "show system interface",
     "diagnose lldprx neighbor details",
     "get system interface physical",
-    "show full-configuration",           # komplette Konfiguration inkl. Standardwerte
+    "show full-configuration",
 ]
 COMMANDS = {"cisco": CISCO_COMMANDS, "nxos": NXOS_COMMANDS, "fortinet": FORTINET_COMMANDS}
-# -----------------------------------------
 
 
 def load_credentials() -> dict[str, Credentials]:
-    """SSH-Zugangsdaten je Hersteller aus der .env, bricht mit klarer Meldung ab, wenn etwas fehlt."""
     missing = [name for name in ("cisco_ssh_username", "cisco_ssh_password",
                                  "fortinet_ssh_username", "fortinet_ssh_password")
                if not getattr(settings, name)]
@@ -94,7 +82,6 @@ def main() -> None:
         job = repo.create_job(target="GNS3-Lab")
 
         targets = [to_target(d, credentials[vendor_key(d.vendor)]) for d in devices.values()]
-        # nacheinander: alle Geräte laufen auf derselben GNS3-VM und bremsen sich parallel gegenseitig aus
         collector = ConfigCollector(max_workers=1, settings=ConnectionSettings(retries=1, retry_delay=2))
         results = collector.collect_many(targets, COMMANDS)
 
