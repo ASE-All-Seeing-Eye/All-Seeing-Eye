@@ -78,7 +78,8 @@ def main() -> None:
     with SessionFactory() as session:
         seed_lab_devices(session)
         repo = CollectionRepository(session)
-        devices = {str(d.management_ip): d for d in repo.devices()}
+        lab_ips = {ip for _, _, ip in LAB_DEVICES}
+        devices = {str(d.management_ip): d for d in repo.devices() if str(d.management_ip) in lab_ips}
         job = repo.create_job(target="GNS3-Lab")
 
         targets = [to_target(d, credentials[vendor_key(d.vendor)]) for d in devices.values()]
