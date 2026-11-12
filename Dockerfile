@@ -1,8 +1,8 @@
 # Frontend
 FROM node:24-alpine AS frontend
 WORKDIR /frontend
-COPY frontend/package.json ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
@@ -22,6 +22,9 @@ RUN uv sync --frozen --no-dev
 
 COPY --from=frontend /frontend/dist ./static
 ENV STATIC_DIR=/app/static
+
+RUN useradd --create-home --uid 1000 ase && chown -R ase:ase /app
+USER ase
 
 EXPOSE 8000
 CMD ["sh", "-c", "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn all_seeing_eye.api.main:app --host 0.0.0.0 --port 8000"]
