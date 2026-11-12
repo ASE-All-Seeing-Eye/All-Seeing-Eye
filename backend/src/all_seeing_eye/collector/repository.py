@@ -9,7 +9,7 @@ from all_seeing_eye.database.models import AuditLog, Collection, Command, Config
 from .collector import CollectionResult
 from .models import Credentials, SSHTarget
 
-DEVICE_TYPES = {"cisco": "cisco_ios", "fortinet": "fortinet"}
+DEVICE_TYPES = {"cisco": "cisco_ios", "nxos": "cisco_nxos", "fortinet": "fortinet"}
 
 # Dieser Befehl liefert die eigentliche Konfiguration und landet zusätzlich in Configuration
 CONFIG_COMMANDS = {"cisco": "show running-config", "fortinet": "show full-configuration"}
@@ -21,8 +21,10 @@ def vendor_key(vendor: str | None) -> str:
 
 
 def to_target(device: Device, credentials: Credentials) -> SSHTarget:
+    # os_type setzt der Parser nach dem ersten Lauf. Bis dahin wird ein Nexus wie IOS abgefragt.
+    platform = "nxos" if (device.os_type or "").lower() == "nxos" else vendor_key(device.vendor)
     return SSHTarget(
-        device_type=DEVICE_TYPES[vendor_key(device.vendor)],
+        device_type=DEVICE_TYPES[platform],
         host=str(device.management_ip),
         username=credentials.username,
         password=credentials.password,
