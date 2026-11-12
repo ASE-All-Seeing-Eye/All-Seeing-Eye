@@ -27,3 +27,19 @@ export async function getJobAnalyse(jobId) {
   if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
   return res.json();
 }
+
+export async function startJobQueue() {
+  const res = await fetch("/api/jobqueue/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
+  return res.json();
+}
+
+export async function getJobQueueStatus() {
+  const res = await fetch("/api/jobqueue/status");
+  if (!res.ok) throw new Error(`Backend antwortet mit ${res.status}`);
+  return res.json();
+}

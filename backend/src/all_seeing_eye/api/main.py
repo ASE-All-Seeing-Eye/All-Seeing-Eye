@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from all_seeing_eye.api.inventory import router as inventory_router
 from all_seeing_eye.api.topology import router as topology_router
 from all_seeing_eye.api.analysis import router as analysis_router
+from all_seeing_eye.api.jobqueue import router as jobqueue_router
 
 app = FastAPI(title="All Seeing Eye API")
 
@@ -23,6 +24,7 @@ def health() -> dict[str, str]:
 app.include_router(inventory_router)
 app.include_router(topology_router)
 app.include_router(analysis_router)
+app.include_router(jobqueue_router)
 
 static_dir = os.getenv("STATIC_DIR")
 if static_dir and Path(static_dir).exists():
