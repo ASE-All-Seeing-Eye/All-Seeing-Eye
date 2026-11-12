@@ -91,7 +91,18 @@ export default function TopologyView() {
       if (ereignis.target === cy) setAuswahl(null);
     });
 
-    return () => cy.destroy();
+    const neuEinpassen = () => {
+      cy.resize();
+      cy.fit(undefined, 160);
+      cy.panBy({ x: -150, y: 0 });
+    };
+    requestAnimationFrame(neuEinpassen);
+    window.addEventListener("resize", neuEinpassen);
+
+    return () => {
+      window.removeEventListener("resize", neuEinpassen);
+      cy.destroy();
+    };
   }, [daten]);
 
   if (fehler) {
@@ -102,39 +113,53 @@ export default function TopologyView() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "system-ui, sans-serif", background: "#f4f4f5" }}>
-      <main style={{ padding: 32, maxWidth: 1200, margin: "0 auto" }}>
-        <h1 style={{ margin: "0 0 24px", fontSize: 30 }}>Topologie</h1>
+    <div
+      style={{
+        position: "relative",
+        height: "calc(100vh - 57px)",
+        overflow: "hidden",
+        fontFamily: "system-ui, sans-serif",
+        background: "white",
+        backgroundImage: "radial-gradient(#d4d4d8 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+      }}
+    >
+      <div ref={zeichenflaeche} style={{ position: "absolute", inset: 0 }} />
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-          <Infokasten text={`Geräte: ${daten.nodes.length}`} />
-          <Infokasten text={`Verbindungen: ${daten.edges.length}`} />
-        </div>
+      <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 12 }}>
+        <Infokasten text={`Geräte: ${daten.nodes.length}`} />
+        <Infokasten text={`Verbindungen: ${daten.edges.length}`} />
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 20 }}>
-          <div style={{ ...karte, padding: 0, overflow: "hidden" }}>
-            <div ref={zeichenflaeche} style={{ width: "100%", height: 600 }} />
-          </div>
-
-          <div style={karte}>
-            <div style={{ fontWeight: 600, marginBottom: 14 }}>Gerät</div>
-            {auswahl ? <GeraeteDetails geraet={auswahl} /> : (
-              <p style={{ fontSize: 14, color: "#52525b" }}>Klick auf ein Gerät, um Details zu sehen.</p>
-            )}
-
-            <div style={{ fontWeight: 600, margin: "24px 0 10px" }}>Legende</div>
-            <Legende bild={ICONS.router} text="Router" />
-            <Legende bild={ICONS.switch} text="Switch" />
-            <Legende bild={ICONS.firewall} text="Firewall" />
-          </div>
-        </div>
-
-        {daten.edges.length === 0 && (
-          <p style={{ color: "#52525b", fontSize: 14, marginTop: 16 }}>
-            Noch keine Verbindungen in der Datenbank. Sobald der Collector Nachbarn erkennt, erscheinen hier die Kabel.
-          </p>
+      <div style={{ ...karte, position: "absolute", top: 16, right: 16, width: 280, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
+        <div style={{ fontWeight: 600, marginBottom: 14 }}>Gerät</div>
+        {auswahl ? <GeraeteDetails geraet={auswahl} /> : (
+          <p style={{ fontSize: 14, color: "#52525b" }}>Klick auf ein Gerät, um Details zu sehen.</p>
         )}
-      </main>
+
+        <div style={{ fontWeight: 600, margin: "24px 0 10px" }}>Legende</div>
+        <Legende bild={ICONS.router} text="Router" />
+        <Legende bild={ICONS.switch} text="Switch" />
+        <Legende bild={ICONS.firewall} text="Firewall" />
+      </div>
+
+      {daten.edges.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 16,
+            left: 16,
+            background: "white",
+            border: "1px solid #d4d4d8",
+            borderRadius: 10,
+            padding: "8px 14px",
+            fontSize: 13,
+            color: "#52525b",
+          }}
+        >
+          Noch keine Verbindungen in der Datenbank. Sobald der Collector Nachbarn erkennt, erscheinen hier die Kabel.
+        </div>
+      )}
     </div>
   );
 }

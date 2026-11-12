@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { getJobs, getJobAnalyse } from "./api";
+import { getJobs, getJobAnalyse, startJobQueue, getJobQueueStatus } from "./api";
+
 
 const SCHWEREGRAD = {
   CRITICAL: { label: "KRITISCH", farbe: "#b91c1c", hell: "#fee2e2", rand: "#b91c1c" },
@@ -19,6 +20,8 @@ export default function AnalyseView() {
   const [auswahl, setAuswahl] = useState(0);
   const [geraetFilter, setGeraetFilter] = useState("alle");
   const [stufenFilter, setStufenFilter] = useState("alle");
+  const [queue, setQueue] = useState({ laeuft: false, job_id: null, schritt: null });
+  const [queueFehler, setQueueFehler] = useState(null);
 
   useEffect(() => {
     getJobs()
@@ -27,6 +30,7 @@ export default function AnalyseView() {
         if (liste.length > 0) setJobId(liste[0].id);
       })
       .catch((e) => setFehler(e.message));
+    getJobQueueStatus().then(setQueue).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -38,6 +42,34 @@ export default function AnalyseView() {
     getJobAnalyse(jobId).then(setAnalyse).catch((e) => setFehler(e.message));
   }, [jobId]);
 
+  useEffect(() => {
+    if (!queue.laeuft) return;
+    const timer = setInterval(() => {
+      getJobQueueStatus()
+        .then((s) => {
+          if (s.laeuft) {
+            setQueue(s);
+          } else {
+            const fertig = queue.job_id;
+            setQueue(s);
+            getJobs().then((liste) => {
+              setJobs(liste);
+              setJobId(fertig);
+            });
+          }
+        })
+        .catch((e) => setQueueFehler(e.message));
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [queue.laeuft, queue.job_id]);
+
+  function jobStarten() {
+    setQueueFehler(null);
+    startJobQueue()
+      .then((antwort) => setQueue({ laeuft: true, job_id: antwort.job_id, schritt: "Wird gestartet" }))
+      .catch((e) => setQueueFehler(e.message));
+  }
+
   if (fehler) {
     return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
   }
@@ -45,7 +77,12 @@ export default function AnalyseView() {
     return <Rahmen><p>Lade Analysen …</p></Rahmen>;
   }
   if (jobs.length === 0) {
-    return <Rahmen><p>Noch keine Analyse vorhanden.</p></Rahmen>;
+    return (
+      <Rahmen>
+        <p>Noch keine Analyse vorhanden.</p>
+        <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
+      </Rahmen>
+    );
   }
 
   return (
@@ -66,6 +103,9 @@ export default function AnalyseView() {
           </label>
           {analyse && <Infokasten text={`Ziel: ${analyse.job.target}`} />}
           {analyse && <Infokasten text={`Status: ${analyse.job.status}`} />}
+          <div style={{ marginLeft: "auto" }}>
+            <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
+          </div>
         </div>
 
         {analyse?.job.error_message && (
@@ -293,6 +333,32 @@ function Infokasten({ text }) {
   return (
     <div style={{ background: "white", border: "1px solid #d4d4d8", borderRadius: 10, padding: "10px 16px", fontSize: 14 }}>
       {text}
+    </div>
+  );
+}
+
+
+function JobQueueKnopf({ queue, fehler, onStart }) {
+  return (
+    <div style={{ textAlign: "right" }}>
+      <button
+        onClick={onStart}
+        disabled={queue.laeuft}
+        style={{
+          background: queue.laeuft ? "#a1a1aa" : "#18181b",
+          color: "white",
+          border: "none",
+          borderRadius: 10,
+          padding: "10px 18px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: queue.laeuft ? "default" : "pointer",
+        }}
+      >
+        {queue.laeuft ? `Job ${queue.job_id} läuft …` : "Kompletten Scan starten"}
+      </button>
+      {queue.laeuft && <div style={{ fontSize: 12, color: "#52525b", marginTop: 6 }}>{queue.schritt}</div>}
+      {fehler && <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 6 }}>{fehler}</div>}
     </div>
   );
 }

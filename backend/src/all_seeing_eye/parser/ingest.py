@@ -99,3 +99,25 @@ def process_collection(collection_id: int) -> None:
         config_status = ParseStatus.OK if result.config else ParseStatus.FAILED
         db.save_parsed_configuration(configuration["id"], result.config, config_status)
     db.log_event(Actor.PARSER, Action.PARSE, "collection", collection_id, status, ";".join(result.errors) or None)
+
+def process_job(job_id: int) -> None:
+    for collection in db.get_collections_of_job(job_id):
+        if collection["status"] == Status.FAILED:
+            continue
+        process_collection(collection["id"])
+    resolve_connections()
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--job", type=int)
+    group.add_argument("--collection", type=int)
+    args = parser.parse_args()
+
+    if args.job is not None:
+        process_job(args.job)
+    else:
+        process_collection(args.collection)
+        resolve_connections()

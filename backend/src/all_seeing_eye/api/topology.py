@@ -1,12 +1,14 @@
 from fastapi import APIRouter
-from all_seeing_eye.database.repository import list_devices, list_interfaces, list_connections
+from all_seeing_eye.database.repository import list_interfaces, list_connections
+from all_seeing_eye.api.inventory import devices_from_last_scan
 
 router = APIRouter(prefix="/api/topology", tags=["Topologie"])
 
 
 @router.get("")
 def get_topology():
-    devices = list_devices()
+    devices = devices_from_last_scan()
+    device_ids = {device["id"] for device in devices}
 
     interface_namen = {}
     for device in devices:
@@ -28,7 +30,7 @@ def get_topology():
     schon_gesehen = set()
 
     for connection in list_connections():
-        if connection["target_device_id"] is None:
+        if connection["source_device_id"] not in device_ids or connection["target_device_id"] not in device_ids:
             continue
 
         schluessel = tuple(sorted([connection["source_interface_id"], connection["target_interface_id"]]))
