@@ -2,7 +2,7 @@
 Collection pro Gerät (Command pro Befehl, Konfiguration zusätzlich als Configuration).
 
 Start (im Ordner backend):
-    uv run python -m all_seeing_eye.collector.run_gns3
+    uv run python -m all_seeing_eye.collector.run
 """
 import logging
 import re
