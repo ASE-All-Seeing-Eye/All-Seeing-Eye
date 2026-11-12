@@ -21,13 +21,12 @@ from all_seeing_eye.collector.repository import CollectionRepository, to_target,
 # ---- An deine Konfiguration anpassen ----
 # Die SSH-Zugangsdaten stehen in backend/.env (CISCO_SSH_USERNAME, CISCO_SSH_PASSWORD, ...)
 
-# Nur nötig, solange der Scanner die Geräte noch nicht in die DB schreibt
 LAB_DEVICES = [
-    ("R1", "cisco", "10.40.1.194"),
-    ("R2", "cisco", "10.40.1.195"),
-    ("R3", "cisco", "10.40.1.196"),
-    ("R4", "cisco", "10.40.1.197"),
-    ("FortiGate-1", "fortinet", "10.40.1.199"),
+    ("FortiGate-1", "fortinet", "10.50.20.1"),
+    ("Nexus-01", "cisco", "10.50.10.11"),
+    ("Nexus-02", "cisco", "10.50.10.12"),
+    ("CAT-01", "cisco", "10.50.10.21"),
+    ("CAT-02", "cisco", "10.50.10.22"),
 ]
 
 OUTPUT_DIR = Path("gns3_output")   # zusätzlich als .txt, zum Nachschauen
