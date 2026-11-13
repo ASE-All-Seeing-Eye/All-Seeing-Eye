@@ -192,7 +192,7 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
       </div>
 
       {gesamt === 0 ? (
-        <p style={{ color: "#52525b", marginTop: 20 }}>In diesem Durchlauf wurden keine Findings gespeichert.</p>
+        null
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
           <div style={karte}>

@@ -12,7 +12,6 @@ export default function App() {
       <nav style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 32px", background: "#18181b" }}>
         <button
           onClick={() => setSeite("uebersicht")}
-          title="Zur Übersicht"
           style={{
             display: "flex",
             alignItems: "center",
@@ -31,6 +30,7 @@ export default function App() {
           All Seeing Eye
         </button>
 
+        <NavKnopf aktiv={seite === "uebersicht"} onClick={() => setSeite("uebersicht")}>Übersicht</NavKnopf>
         <NavKnopf aktiv={seite === "analyse"} onClick={() => setSeite("analyse")}>Analyse</NavKnopf>
         <NavKnopf aktiv={seite === "inventar"} onClick={() => setSeite("inventar")}>Inventar</NavKnopf>
         <NavKnopf aktiv={seite === "topologie"} onClick={() => setSeite("topologie")}>Topologie</NavKnopf>

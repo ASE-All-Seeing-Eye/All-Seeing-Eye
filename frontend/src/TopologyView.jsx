@@ -56,6 +56,7 @@ export default function TopologyView() {
   const [fehler, setFehler] = useState(null);
   const [auswahl, setAuswahl] = useState(null);
   const zeichenflaeche = useRef(null);
+  const hintergrund = useRef(null);
 
   useEffect(() => {
     getTopology().then(setDaten).catch((e) => setFehler(e.message));
@@ -91,6 +92,16 @@ export default function TopologyView() {
       if (ereignis.target === cy) setAuswahl(null);
     });
 
+    const punkteMitbewegen = () => {
+      if (!hintergrund.current) return;
+      const zoom = cy.zoom();
+      const pan = cy.pan();
+      hintergrund.current.style.backgroundSize = `${20 * zoom}px ${20 * zoom}px`;
+      hintergrund.current.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+    };
+
+    cy.on("viewport", punkteMitbewegen);
+
     const neuEinpassen = () => {
       cy.resize();
       cy.fit(undefined, 160);
@@ -114,6 +125,7 @@ export default function TopologyView() {
 
   return (
     <div
+      ref={hintergrund}
       style={{
         position: "relative",
         height: "calc(100vh - 57px)",
@@ -128,7 +140,6 @@ export default function TopologyView() {
 
       <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 12 }}>
         <Infokasten text={`Geräte: ${daten.nodes.length}`} />
-        <Infokasten text={`Verbindungen: ${daten.edges.length}`} />
       </div>
 
       <div style={{ ...karte, position: "absolute", top: 16, right: 16, width: 280, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
@@ -142,24 +153,6 @@ export default function TopologyView() {
         <Legende bild={ICONS.switch} text="Switch" />
         <Legende bild={ICONS.firewall} text="Firewall" />
       </div>
-
-      {daten.edges.length === 0 && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 16,
-            left: 16,
-            background: "white",
-            border: "1px solid #d4d4d8",
-            borderRadius: 10,
-            padding: "8px 14px",
-            fontSize: 13,
-            color: "#52525b",
-          }}
-        >
-          Noch keine Verbindungen in der Datenbank. Sobald der Collector Nachbarn erkennt, erscheinen hier die Kabel.
-        </div>
-      )}
     </div>
   );
 }
