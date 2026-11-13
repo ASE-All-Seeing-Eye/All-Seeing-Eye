@@ -23,7 +23,7 @@ RUN uv sync --frozen --no-dev
 COPY --from=frontend /frontend/dist ./static
 ENV STATIC_DIR=/app/static
 
-RUN useradd --create-home --uid 1000 ase && chown -R ase:ase /app
+RUN useradd --create-home --uid 10001 ase
 USER ase
 
 EXPOSE 8000
