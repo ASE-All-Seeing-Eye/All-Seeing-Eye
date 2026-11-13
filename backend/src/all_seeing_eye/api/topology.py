@@ -11,9 +11,12 @@ def get_topology():
     device_ids = {device["id"] for device in devices}
 
     interface_namen = {}
+    switch_geraete = set()
     for device in devices:
         for interface in list_interfaces(device["id"]):
             interface_namen[interface["id"]] = interface["name"]
+            if interface["mode"] in ("access", "trunk") or interface["name"].lower().startswith("vlan"):
+                switch_geraete.add(device["id"])
 
     nodes = []
     for device in devices:
@@ -23,6 +26,9 @@ def get_topology():
                 "label": device["hostname"] or str(device["management_ip"]),
                 "vendor": device["vendor"],
                 "ip": str(device["management_ip"]),
+                "model": device["model"],
+                "os_type": device["os_type"],
+                "switch": device["id"] in switch_geraete,
             }
         })
 

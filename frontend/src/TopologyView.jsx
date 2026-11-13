@@ -8,7 +8,7 @@ const ICONS = {
   firewall: "/icons/firewall.svg",
 };
 
-const STIL = [
+export const STIL = [
   {
     selector: "node",
     style: {
@@ -164,11 +164,17 @@ export default function TopologyView() {
   );
 }
 
-function mitGeraetetyp(node) {
+export function mitGeraetetyp(node) {
   const d = node.data;
+  const modell = (d.model || "").toLowerCase();
   let typ = "router";
   if ((d.vendor || "").toLowerCase() === "fortinet") typ = "firewall";
-  else if ((d.label || "").toLowerCase().startsWith("sw")) typ = "switch";
+  else if (
+    d.switch ||
+    (d.label || "").toLowerCase().startsWith("sw") ||
+    modell.startsWith("c9") ||
+    d.os_type === "nxos"
+  ) typ = "switch";
   return { data: { ...d, typ } };
 }
 

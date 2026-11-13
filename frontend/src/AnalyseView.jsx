@@ -86,7 +86,7 @@ export default function AnalyseView() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "system-ui, sans-serif", background: "#f4f4f5" }}>
+    <div style={{ fontFamily: "system-ui, sans-serif", background: "#f4f4f5" }}>
       <main style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
         <h1 style={{ margin: "0 0 24px", fontSize: 30 }}>Analyse</h1>
 
