@@ -1,3 +1,19 @@
+:root {
+  --bg: #05090d;
+  --flaeche: #091118;
+  --flaeche-hell: #0d1820;
+  --linie: #10212a;
+  --linie-stark: #213641;
+  --text: #eefcff;
+  --text-hell: #b0c4cc;
+  --gedaempft: #8ba0a8;
+  --akzent: #45dcff;
+  --akzent-weich: #9decff;
+  --rot: #f43225;
+  --schrift: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Code", Consolas, monospace;
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -17,4 +33,427 @@ main {
 
 .error {
   color: #b42318;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 57px;
+  box-sizing: border-box;
+  padding: 0 32px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--linie-stark);
+  font-family: var(--schrift);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+.nav-logo img {
+  height: 32px;
+}
+
+.nav-logo span {
+  color: var(--akzent);
+}
+
+.nav-knopf {
+  height: 57px;
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--gedaempft);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nav-knopf:hover {
+  color: var(--text);
+}
+
+.nav-knopf.aktiv {
+  color: var(--akzent);
+  border-bottom-color: var(--akzent);
+}
+
+.seite {
+  min-height: calc(100vh - 57px);
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--schrift);
+}
+
+.seite-inhalt {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+
+.oberzeile {
+  margin: 0 0 12px;
+  color: var(--akzent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.seitentitel {
+  margin: 0 0 8px;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.seitentitel span {
+  color: var(--akzent);
+}
+
+.untertitel {
+  margin: 0 0 32px;
+  color: var(--text-hell);
+  font-size: 16px;
+}
+
+.kennzahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kennzahl {
+  padding: 18px 20px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie-stark);
+  border-radius: 4px;
+}
+
+.kennzahl-titel {
+  margin-bottom: 8px;
+  color: var(--gedaempft);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kennzahl-wert {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kennzahl.hervorgehoben {
+  border-top: 2px solid var(--akzent);
+}
+
+.kennzahl.hervorgehoben .kennzahl-wert {
+  color: var(--akzent);
+}
+
+.karte {
+  padding: 20px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie-stark);
+  border-radius: 4px;
+}
+
+.suchfeld {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--linie-stark);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--schrift);
+  font-size: 14px;
+  outline: none;
+}
+
+.suchfeld::placeholder {
+  color: var(--gedaempft);
+}
+
+.suchfeld:focus {
+  border-color: var(--akzent);
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabelle th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--linie-stark);
+  color: var(--gedaempft);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.tabelle td {
+  padding: 12px;
+  border-bottom: 1px solid var(--linie);
+  color: var(--text-hell);
+}
+
+.tabelle tbody tr:hover {
+  background: var(--flaeche-hell);
+}
+
+.tabelle .hostname {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tabelle .ip {
+  color: var(--akzent-weich);
+  font-family: var(--mono);
+}
+
+.hersteller {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--gedaempft);
+  border-radius: 3px;
+  color: var(--gedaempft);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hersteller.cisco {
+  border-color: var(--akzent);
+  color: var(--akzent);
+  background: rgba(69, 220, 255, 0.08);
+}
+
+.hersteller.fortinet {
+  border-color: var(--rot);
+  color: var(--rot);
+  background: rgba(244, 50, 37, 0.08);
+}
+
+.hinweis {
+  margin: 0;
+  color: var(--gedaempft);
+}
+
+.hinweis.fehler {
+  color: var(--rot);
+}
+
+
+.karten-titel {
+  margin-bottom: 16px;
+  color: var(--gedaempft);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.klickbar {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.klickbar:hover {
+  border-color: var(--akzent);
+}
+
+.knopf {
+  padding: 12px 20px;
+  background: var(--akzent);
+  border: 1px solid var(--akzent);
+  border-radius: 3px;
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.knopf:hover {
+  background: var(--akzent-weich);
+}
+
+.knopf:disabled {
+  background: transparent;
+  border-color: var(--linie-stark);
+  color: var(--gedaempft);
+  cursor: default;
+}
+
+.auswahlbox {
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1px solid var(--linie-stark);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--schrift);
+  font-size: 14px;
+}
+
+.info-kasten {
+  padding: 9px 14px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie-stark);
+  border-radius: 4px;
+  color: var(--text-hell);
+  font-size: 14px;
+}
+
+.info-kasten b {
+  color: var(--text);
+}
+
+.warnung {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: rgba(245, 197, 66, 0.08);
+  border: 1px solid #f5c542;
+  border-left-width: 3px;
+  border-radius: 4px;
+  color: #f5c542;
+  font-size: 14px;
+}
+
+.filter-knopf {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--linie-stark);
+  border-radius: 3px;
+  color: var(--text-hell);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.finding {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--linie);
+  border-left-width: 3px;
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--schrift);
+  text-align: left;
+  cursor: pointer;
+}
+
+.finding:hover {
+  background: var(--flaeche-hell);
+}
+
+.finding.aktiv {
+  background: var(--flaeche-hell);
+  border-color: var(--akzent);
+}
+
+.finding-titel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.finding-info {
+  margin-top: 3px;
+  color: var(--gedaempft);
+  font-size: 12px;
+}
+
+.stufe {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.feld-titel {
+  margin-bottom: 6px;
+  color: var(--akzent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.beleg {
+  margin: 0;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--linie-stark);
+  border-radius: 3px;
+  color: var(--akzent-weich);
+  font-family: var(--mono);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.balken-spur {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  background: var(--linie);
+  border-radius: 2px;
+}
+
+.zeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linie);
+  font-size: 14px;
+}
+
+.punkte-hintergrund {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--linie-stark) 1px, transparent 1px);
+  background-size: 20px 20px;
 }

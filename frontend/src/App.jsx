@@ -9,25 +9,10 @@ export default function App() {
 
   return (
     <div>
-      <nav style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 32px", background: "#18181b" }}>
-        <button
-          onClick={() => setSeite("uebersicht")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "transparent",
-            border: "none",
-            color: "white",
-            fontSize: 18,
-            fontWeight: 700,
-            cursor: "pointer",
-            padding: 0,
-            marginRight: 24,
-          }}
-        >
-          <img src="/images/ASE_Logo_weiss.png" alt="" style={{ height: 32 }} />
-          All Seeing Eye
+      <nav className="navigation">
+        <button className="nav-logo" onClick={() => setSeite("uebersicht")}>
+          <img src="/images/ASE_Logo_weiss.png" alt="" />
+          ALL SEEING <span>EYE</span>
         </button>
 
         <NavKnopf aktiv={seite === "uebersicht"} onClick={() => setSeite("uebersicht")}>Übersicht</NavKnopf>
@@ -46,19 +31,7 @@ export default function App() {
 
 function NavKnopf({ aktiv, onClick, children }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        background: aktiv ? "white" : "transparent",
-        color: aktiv ? "#18181b" : "white",
-        border: "none",
-        borderRadius: 8,
-        padding: "8px 16px",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-      }}
-    >
+    <button className={aktiv ? "nav-knopf aktiv" : "nav-knopf"} onClick={onClick}>
       {children}
     </button>
   );

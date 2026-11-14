@@ -19,29 +19,34 @@ export const STIL = [
       "background-opacity": 0,
       "background-fit": "contain",
       "background-clip": "none",
-      color: "#18181b",
+      color: "#eefcff",
+      "font-family": "Segoe UI, system-ui, sans-serif",
       "font-size": 13,
       "font-weight": 700,
       "text-valign": "bottom",
-      "text-margin-y": 4,
+      "text-margin-y": 6,
     },
   },
   { selector: 'node[typ = "router"]', style: { "background-image": ICONS.router } },
   { selector: 'node[typ = "switch"]', style: { "background-image": ICONS.switch, shape: "round-rectangle" } },
   { selector: 'node[typ = "firewall"]', style: { "background-image": ICONS.firewall } },
-  { selector: "node:selected", style: { "overlay-color": "#facc15", "overlay-opacity": 0.3, "overlay-padding": 8 } },
+  { selector: "node:selected", style: { "overlay-color": "#45dcff", "overlay-opacity": 0.25, "overlay-padding": 8 } },
   {
     selector: "edge",
     style: {
-      width: 3,
-      "line-color": "#334155",
+      width: 2,
+      "line-color": "#405660",
       "curve-style": "bezier",
+      "font-family": "Consolas, monospace",
       "font-size": 10,
       "font-weight": 600,
-      color: "#0f172a",
-      "text-background-color": "#fef9c3",
+      color: "#9decff",
+      "text-background-color": "#091118",
       "text-background-opacity": 1,
       "text-background-padding": 3,
+      "text-border-color": "#213641",
+      "text-border-width": 1,
+      "text-border-opacity": 1,
       "text-background-shape": "roundrectangle",
       "source-text-offset": 50,
       "target-text-offset": 50,
@@ -117,38 +122,38 @@ export default function TopologyView() {
   }, [daten]);
 
   if (fehler) {
-    return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
+    return <Rahmen><p className="hinweis fehler">Fehler beim Laden: {fehler}</p></Rahmen>;
   }
   if (!daten) {
-    return <Rahmen><p>Lade Topologie …</p></Rahmen>;
+    return <Rahmen><p className="hinweis">Lade Topologie …</p></Rahmen>;
   }
 
   return (
     <div
       ref={hintergrund}
+      className="punkte-hintergrund"
       style={{
         position: "relative",
         height: "calc(100vh - 57px)",
         overflow: "hidden",
-        fontFamily: "system-ui, sans-serif",
-        background: "white",
-        backgroundImage: "radial-gradient(#d4d4d8 1px, transparent 1px)",
-        backgroundSize: "20px 20px",
+        color: "var(--text)",
+        fontFamily: "var(--schrift)",
       }}
     >
       <div ref={zeichenflaeche} style={{ position: "absolute", inset: 0 }} />
 
-      <div style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 12 }}>
-        <Infokasten text={`Geräte: ${daten.nodes.length}`} />
+      <div style={{ position: "absolute", top: 24, left: 32 }}>
+        <p className="oberzeile">Topologie / Netzwerkplan</p>
+        <div className="info-kasten">Geräte: <b>{daten.nodes.length}</b></div>
       </div>
 
-      <div style={{ ...karte, position: "absolute", top: 16, right: 16, width: 280, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-        <div style={{ fontWeight: 600, marginBottom: 14 }}>Gerät</div>
+      <div className="karte" style={{ position: "absolute", top: 16, right: 16, width: 280 }}>
+        <div className="karten-titel">Gerät</div>
         {auswahl ? <GeraeteDetails geraet={auswahl} /> : (
-          <p style={{ fontSize: 14, color: "#52525b" }}>Klick auf ein Gerät, um Details zu sehen.</p>
+          <p className="hinweis" style={{ fontSize: 14 }}>Klick auf ein Gerät, um Details zu sehen.</p>
         )}
 
-        <div style={{ fontWeight: 600, margin: "24px 0 10px" }}>Legende</div>
+        <div className="karten-titel" style={{ marginTop: 24 }}>Legende</div>
         <Legende bild={ICONS.router} text="Router" />
         <Legende bild={ICONS.switch} text="Switch" />
         <Legende bild={ICONS.firewall} text="Firewall" />
@@ -173,18 +178,18 @@ export function mitGeraetetyp(node) {
 
 function GeraeteDetails({ geraet }) {
   return (
-    <div style={{ fontSize: 14, lineHeight: 1.8 }}>
-      <div><b>Name:</b> {geraet.label}</div>
-      <div><b>IP:</b> {geraet.ip}</div>
-      <div><b>Hersteller:</b> {geraet.vendor || "–"}</div>
+    <div style={{ fontSize: 14, lineHeight: 1.8, color: "var(--text-hell)" }}>
+      <div style={{ color: "var(--text)", fontSize: 18, fontWeight: 700 }}>{geraet.label}</div>
+      <div style={{ fontFamily: "var(--mono)", color: "var(--akzent-weich)" }}>{geraet.ip}</div>
+      <div>Hersteller: {geraet.vendor || "–"}</div>
 
-      <div style={{ fontWeight: 600, marginTop: 14 }}>Verbindungen</div>
+      <div className="karten-titel" style={{ marginTop: 16, marginBottom: 6 }}>Verbindungen</div>
       {geraet.kabel.length === 0 ? (
-        <div style={{ color: "#52525b" }}>Keine bekannt</div>
+        <div className="hinweis">Keine bekannt</div>
       ) : (
         geraet.kabel.map((k) => (
-          <div key={k.id} style={{ fontSize: 13, fontFamily: "Consolas, monospace" }}>
-            {k.eigenesInterface || "?"} → {k.nachbar} ({k.nachbarInterface || "?"})
+          <div key={k.id} style={{ fontSize: 13, fontFamily: "var(--mono)" }}>
+            {k.eigenesInterface || "?"} <span style={{ color: "var(--akzent)" }}>→</span> {k.nachbar} ({k.nachbarInterface || "?"})
           </div>
         ))
       )}
@@ -194,28 +199,17 @@ function GeraeteDetails({ geraet }) {
 
 function Legende({ bild, text }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, marginBottom: 6 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, marginBottom: 6, color: "var(--text-hell)" }}>
       <img src={bild} alt="" style={{ width: 28, height: 28, objectFit: "contain" }} />
       {text}
     </div>
   );
 }
 
-function Infokasten({ text }) {
+function Rahmen({ children }) {
   return (
-    <div style={{ background: "white", border: "1px solid #d4d4d8", borderRadius: 10, padding: "10px 16px", fontSize: 14 }}>
-      {text}
+    <div className="seite">
+      <div className="seite-inhalt">{children}</div>
     </div>
   );
 }
-
-function Rahmen({ children }) {
-  return <div style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>{children}</div>;
-}
-
-const karte = {
-  background: "white",
-  border: "1px solid #d4d4d8",
-  borderRadius: 16,
-  padding: 20,
-};

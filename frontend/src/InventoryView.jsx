@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { getInventory } from "./api";
 
-const HERSTELLER_FARBE = {
-  cisco: { hell: "#dbeafe", rand: "#2563eb" },
-  fortinet: { hell: "#fee2e2", rand: "#dc2626" },
-};
-
 export default function InventoryView() {
   const [geraete, setGeraete] = useState([]);
   const [fehler, setFehler] = useState(null);
@@ -22,10 +17,10 @@ export default function InventoryView() {
   }, []);
 
   if (fehler) {
-    return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
+    return <Rahmen><p className="hinweis fehler">Fehler beim Laden: {fehler}</p></Rahmen>;
   }
   if (!geladen) {
-    return <Rahmen><p>Lade Inventar …</p></Rahmen>;
+    return <Rahmen><p className="hinweis">Lade Inventar …</p></Rahmen>;
   }
 
   const suchtext = suche.toLowerCase();
@@ -41,109 +36,82 @@ export default function InventoryView() {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", background: "#f4f4f5" }}>
-      <main style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
-        <h1 style={{ margin: "0 0 24px", fontSize: 30 }}>Inventar</h1>
+    <Rahmen>
+      <p className="oberzeile">Inventar / Datenbank</p>
+      <h1 className="seitentitel">Erfasste <span>Geräte</span></h1>
+      <p className="untertitel">Alle Geräte, die der Scanner im Netzwerk gefunden hat.</p>
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-          <Infokasten text={`Geräte gesamt: ${geraete.length}`} />
-          {Object.entries(anzahlProHersteller).map(([hersteller, anzahl]) => (
-            <Infokasten key={hersteller} text={`${hersteller}: ${anzahl}`} />
-          ))}
-        </div>
+      <div className="kennzahlen">
+        <Kennzahl titel="Geräte gesamt" wert={geraete.length} hervorgehoben />
+        {Object.entries(anzahlProHersteller).map(([hersteller, anzahl]) => (
+          <Kennzahl key={hersteller} titel={hersteller} wert={anzahl} />
+        ))}
+      </div>
 
-        <div style={karte}>
-          <input
-            type="text"
-            placeholder="Suchen nach Hostname, IP, Hersteller …"
-            value={suche}
-            onChange={(e) => setSuche(e.target.value)}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 14px",
-              fontSize: 14,
-              border: "1px solid #d4d4d8",
-              borderRadius: 10,
-              marginBottom: 16,
-            }}
-          />
+      <div className="karte">
+        <input
+          type="text"
+          className="suchfeld"
+          placeholder="Suchen nach Hostname, IP, Hersteller …"
+          value={suche}
+          onChange={(e) => setSuche(e.target.value)}
+        />
 
-          {gefiltert.length === 0 ? (
-            <p style={{ color: "#52525b" }}>
-              {geraete.length === 0 ? "Noch keine Geräte in der Datenbank." : "Kein Gerät passt zur Suche."}
-            </p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                <thead>
-                  <tr style={{ textAlign: "left", color: "#52525b", borderBottom: "2px solid #e4e4e7" }}>
-                    <th style={zelle}>Hostname</th>
-                    <th style={zelle}>Management-IP</th>
-                    <th style={zelle}>Hersteller</th>
-                    <th style={zelle}>Modell</th>
-                    <th style={zelle}>Betriebssystem</th>
-                    <th style={zelle}>Version</th>
+        {gefiltert.length === 0 ? (
+          <p className="hinweis">
+            {geraete.length === 0 ? "Noch keine Geräte in der Datenbank." : "Kein Gerät passt zur Suche."}
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="tabelle">
+              <thead>
+                <tr>
+                  <th>Hostname</th>
+                  <th>Management-IP</th>
+                  <th>Hersteller</th>
+                  <th>Modell</th>
+                  <th>Betriebssystem</th>
+                  <th>Version</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gefiltert.map((geraet) => (
+                  <tr key={geraet.id}>
+                    <td className="hostname">{geraet.hostname || "–"}</td>
+                    <td className="ip">{geraet.management_ip}</td>
+                    <td><HerstellerBadge name={geraet.vendor} /></td>
+                    <td>{geraet.model || "–"}</td>
+                    <td>{geraet.os_type || "–"}</td>
+                    <td>{geraet.os_version || "–"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {gefiltert.map((geraet) => (
-                    <tr key={geraet.id} style={{ borderBottom: "1px solid #e4e4e7" }}>
-                      <td style={{ ...zelle, fontWeight: 600 }}>{geraet.hostname || "–"}</td>
-                      <td style={{ ...zelle, fontFamily: "Consolas, monospace" }}>{geraet.management_ip}</td>
-                      <td style={zelle}><HerstellerBadge name={geraet.vendor} /></td>
-                      <td style={zelle}>{geraet.model || "–"}</td>
-                      <td style={zelle}>{geraet.os_type || "–"}</td>
-                      <td style={zelle}>{geraet.os_version || "–"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Rahmen>
   );
 }
 
 function HerstellerBadge({ name }) {
   if (!name) return "–";
-  const farbe = HERSTELLER_FARBE[name.toLowerCase()] || { hell: "#e4e4e7", rand: "#71717a" };
-  return (
-    <span
-      style={{
-        background: farbe.hell,
-        color: farbe.rand,
-        border: `2px solid ${farbe.rand}`,
-        borderRadius: 6,
-        padding: "2px 10px",
-        fontSize: 12,
-        fontWeight: 700,
-      }}
-    >
-      {name}
-    </span>
-  );
+  return <span className={`hersteller ${name.toLowerCase()}`}>{name}</span>;
 }
 
-function Infokasten({ text }) {
+function Kennzahl({ titel, wert, hervorgehoben }) {
   return (
-    <div style={{ background: "white", border: "1px solid #d4d4d8", borderRadius: 10, padding: "10px 16px", fontSize: 14 }}>
-      {text}
+    <div className={hervorgehoben ? "kennzahl hervorgehoben" : "kennzahl"}>
+      <div className="kennzahl-titel">{titel}</div>
+      <div className="kennzahl-wert">{wert}</div>
     </div>
   );
 }
 
 function Rahmen({ children }) {
-  return <div style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>{children}</div>;
+  return (
+    <div className="seite">
+      <div className="seite-inhalt">{children}</div>
+    </div>
+  );
 }
-
-const karte = {
-  background: "white",
-  border: "1px solid #d4d4d8",
-  borderRadius: 16,
-  padding: 20,
-};
-
-const zelle = { padding: "10px 12px" };

@@ -4,20 +4,20 @@ import { getInventory, getJobs, getJobAnalyse, getTopology } from "./api";
 import { STIL, mitGeraetetyp } from "./TopologyView.jsx";
 
 const SCHWEREGRAD = {
-  CRITICAL: { label: "Kritisch", farbe: "#b91c1c" },
-  HIGH: { label: "Hoch", farbe: "#ef4444" },
-  MEDIUM: { label: "Mittel", farbe: "#facc15" },
-  LOW: { label: "Niedrig", farbe: "#22c55e" },
-  INFO: { label: "Info", farbe: "#3b82f6" },
+  CRITICAL: { label: "Kritisch", farbe: "#f43225" },
+  HIGH: { label: "Hoch", farbe: "#ff8a3d" },
+  MEDIUM: { label: "Mittel", farbe: "#f5c542" },
+  LOW: { label: "Niedrig", farbe: "#3ddc84" },
+  INFO: { label: "Info", farbe: "#45dcff" },
 };
 
 const STATUS = {
-  ok: { text: "Erfolgreich", farbe: "#16a34a" },
-  done: { text: "Erfolgreich", farbe: "#16a34a" },
-  partial: { text: "Teilweise", farbe: "#ca8a04" },
-  failed: { text: "Fehlgeschlagen", farbe: "#b91c1c" },
-  running: { text: "Läuft", farbe: "#2563eb" },
-  pending: { text: "Wartet", farbe: "#52525b" },
+  ok: { text: "Erfolgreich", farbe: "#3ddc84" },
+  done: { text: "Erfolgreich", farbe: "#3ddc84" },
+  partial: { text: "Teilweise", farbe: "#f5c542" },
+  failed: { text: "Fehlgeschlagen", farbe: "#f43225" },
+  running: { text: "Läuft", farbe: "#45dcff" },
+  pending: { text: "Wartet", farbe: "#8ba0a8" },
 };
 
 export default function OverviewView({ onNavigate }) {
@@ -63,10 +63,10 @@ export default function OverviewView({ onNavigate }) {
   }, [daten]);
 
   if (fehler) {
-    return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
+    return <Rahmen><p className="hinweis fehler">Fehler beim Laden: {fehler}</p></Rahmen>;
   }
   if (!daten) {
-    return <Rahmen><p>Lade Übersicht …</p></Rahmen>;
+    return <Rahmen><p className="hinweis">Lade Übersicht …</p></Rahmen>;
   }
 
   const { geraete, jobs, letzter, analyse } = daten;
@@ -75,93 +75,80 @@ export default function OverviewView({ onNavigate }) {
   const dringend = (stats.CRITICAL ?? 0) + (stats.HIGH ?? 0);
 
   return (
-    <div
-      style={{
-        height: "calc(100vh - 57px)",
-        boxSizing: "border-box",
-        padding: "24px 32px",
-        maxWidth: 1164,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <div>
-        <h1 style={{ margin: "0 0 4px", fontSize: 28 }}>Übersicht</h1>
-        <p style={{ margin: 0, color: "#52525b" }}>Der aktuelle Stand des Netzwerks auf einen Blick.</p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-        <Kachel titel="Geräte" wert={geraete.length} onClick={() => onNavigate("inventar")} />
-        <Kachel titel="Letzter Scan" wert={letzter ? datum(letzter.created_at) : "–"} klein />
-        <Kachel titel="Findings" wert={anzahlFindings} onClick={() => onNavigate("analyse")} />
-        <Kachel
-          titel="Kritisch + Hoch"
-          wert={dringend}
-          farbe={dringend > 0 ? "#b91c1c" : undefined}
-          onClick={() => onNavigate("analyse")}
-        />
-      </div>
-
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
-        <div
-          onClick={() => onNavigate("topologie")}
-          style={{
-            ...karte,
-            padding: 0,
-            position: "relative",
-            overflow: "hidden",
-            cursor: "pointer",
-            backgroundImage: "radial-gradient(#d4d4d8 1px, transparent 1px)",
-            backgroundSize: "20px 20px",
-          }}
-        >
-          <div ref={vorschau} style={{ position: "absolute", inset: 0 }} />
-          <div style={{ position: "absolute", top: 16, left: 20, fontWeight: 600 }}>Topologie</div>
-          <div style={{ position: "absolute", bottom: 14, right: 20, fontSize: 13, color: "#52525b" }}>
-            Klicken zum Öffnen →
-          </div>
+    <div className="seite" style={{ height: "calc(100vh - 57px)", minHeight: 0 }}>
+      <div
+        className="seite-inhalt"
+        style={{
+          maxWidth: 1164,
+          height: "100%",
+          boxSizing: "border-box",
+          padding: "28px 32px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+        }}
+      >
+        <div>
+          <p className="oberzeile">Übersicht / Netzwerkstatus</p>
+          <h1 className="seitentitel" style={{ fontSize: 34 }}>Das Netzwerk <span>auf einen Blick</span></h1>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, minHeight: 0, overflowY: "auto" }}>
-          <div style={karte}>
-            <div style={{ fontWeight: 600, marginBottom: 14 }}>Findings nach Schweregrad</div>
-            {anzahlFindings === 0 ? (
-              <p style={{ fontSize: 14, color: "#52525b" }}>Keine Findings im letzten Scan.</p>
-            ) : (
-              Object.entries(SCHWEREGRAD).map(([stufe, s]) => (
-                <Balken key={stufe} label={s.label} farbe={s.farbe} anzahl={stats[stufe] ?? 0} gesamt={anzahlFindings} />
-              ))
-            )}
+        <div className="kennzahlen" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 0 }}>
+          <Kachel titel="Geräte" wert={geraete.length} onClick={() => onNavigate("inventar")} hervorgehoben />
+          <Kachel titel="Letzter Scan" wert={letzter ? datum(letzter.created_at) : "–"} klein />
+          <Kachel titel="Findings" wert={anzahlFindings} onClick={() => onNavigate("analyse")} />
+          <Kachel
+            titel="Kritisch + Hoch"
+            wert={dringend}
+            farbe={dringend > 0 ? "#f43225" : undefined}
+            onClick={() => onNavigate("analyse")}
+          />
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+          <div
+            className="karte klickbar punkte-hintergrund"
+            onClick={() => onNavigate("topologie")}
+            style={{ padding: 0, position: "relative", overflow: "hidden" }}
+          >
+            <div ref={vorschau} style={{ position: "absolute", inset: 0 }} />
+            <div className="karten-titel" style={{ position: "absolute", top: 18, left: 20 }}>Topologie</div>
+            <div className="karten-titel" style={{ position: "absolute", bottom: 2, right: 20, color: "var(--akzent)" }}>
+              Öffnen →
+            </div>
           </div>
 
-          <div style={{ ...karte, flex: 1 }}>
-            <div style={{ fontWeight: 600, marginBottom: 14 }}>Letzte Scans</div>
-            {jobs.length === 0 ? (
-              <p style={{ fontSize: 14, color: "#52525b" }}>Noch kein Scan durchgeführt.</p>
-            ) : (
-              jobs.slice(0, 5).map((job) => {
-                const s = STATUS[job.status] || { text: job.status, farbe: "#52525b" };
-                return (
-                  <div
-                    key={job.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 0",
-                      borderBottom: "1px solid #f4f4f5",
-                      fontSize: 14,
-                    }}
-                  >
-                    <span>Job {job.id} – {datum(job.created_at)}</span>
-                    <span style={{ color: s.farbe, fontWeight: 600 }}>{s.text}</span>
-                  </div>
-                );
-              })
-            )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, minHeight: 0, overflowY: "auto" }}>
+            <div className="karte">
+              <div className="karten-titel">Findings nach Schweregrad</div>
+              {anzahlFindings === 0 ? (
+                <p className="hinweis" style={{ fontSize: 14 }}>Keine Findings im letzten Scan.</p>
+              ) : (
+                Object.entries(SCHWEREGRAD).map(([stufe, s]) => (
+                  <Balken key={stufe} label={s.label} farbe={s.farbe} anzahl={stats[stufe] ?? 0} gesamt={anzahlFindings} />
+                ))
+              )}
+            </div>
+
+            <div className="karte" style={{ flex: 1 }}>
+              <div className="karten-titel">Letzte Scans</div>
+              {jobs.length === 0 ? (
+                <p className="hinweis" style={{ fontSize: 14 }}>Noch kein Scan durchgeführt.</p>
+              ) : (
+                jobs.slice(0, 5).map((job) => {
+                  const s = STATUS[job.status] || { text: job.status, farbe: "#8ba0a8" };
+                  return (
+                    <div key={job.id} className="zeile">
+                      <span style={{ color: "var(--text-hell)" }}>
+                        <span style={{ fontFamily: "var(--mono)", color: "var(--akzent)" }}>#{job.id}</span>{" "}
+                        {datum(job.created_at)}
+                      </span>
+                      <span style={{ color: s.farbe, fontWeight: 600 }}>{s.text}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -169,20 +156,23 @@ export default function OverviewView({ onNavigate }) {
   );
 }
 
-function Kachel({ titel, wert, farbe, klein, onClick }) {
+function Kachel({ titel, wert, farbe, klein, onClick, hervorgehoben }) {
+  const klassen = ["kennzahl", hervorgehoben && "hervorgehoben", onClick && "klickbar"].filter(Boolean).join(" ");
   return (
-    <div onClick={onClick} style={{ ...karte, padding: "16px 20px", cursor: onClick ? "pointer" : "default" }}>
-      <div style={{ fontSize: 13, color: "#52525b", marginBottom: 6 }}>{titel}</div>
-      <div style={{ fontSize: klein ? 18 : 28, fontWeight: 700, color: farbe || "#18181b" }}>{wert}</div>
+    <div className={klassen} onClick={onClick}>
+      <div className="kennzahl-titel">{titel}</div>
+      <div className="kennzahl-wert" style={{ fontSize: klein ? 20 : 32, lineHeight: klein ? "32px" : 1, color: farbe }}>
+        {wert}
+      </div>
     </div>
   );
 }
 
 function Balken({ label, farbe, anzahl, gesamt }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, fontSize: 14 }}>
-      <span style={{ width: 70 }}>{label}</span>
-      <div style={{ flex: 1, height: 12, background: "#e4e4e7", borderRadius: 6, overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, fontSize: 14 }}>
+      <span style={{ width: 70, color: "var(--text-hell)" }}>{label}</span>
+      <div className="balken-spur">
         <div style={{ width: `${(anzahl / gesamt) * 100}%`, height: "100%", background: farbe }} />
       </div>
       <span style={{ width: 24, textAlign: "right", fontWeight: 600 }}>{anzahl}</span>
@@ -191,16 +181,13 @@ function Balken({ label, farbe, anzahl, gesamt }) {
 }
 
 function Rahmen({ children }) {
-  return <div style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>{children}</div>;
+  return (
+    <div className="seite">
+      <div className="seite-inhalt">{children}</div>
+    </div>
+  );
 }
 
 function datum(text) {
   return new Date(text).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" });
 }
-
-const karte = {
-  background: "white",
-  border: "1px solid #d4d4d8",
-  borderRadius: 16,
-  padding: 20,
-};

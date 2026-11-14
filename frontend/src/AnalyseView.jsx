@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { getJobs, getJobAnalyse, startJobQueue, getJobQueueStatus } from "./api";
 
-
 const SCHWEREGRAD = {
-  CRITICAL: { label: "KRITISCH", farbe: "#b91c1c", hell: "#fee2e2", rand: "#b91c1c" },
-  HIGH: { label: "HOCH", farbe: "#ef4444", hell: "#fee2e2", rand: "#dc2626" },
-  MEDIUM: { label: "MITTEL", farbe: "#facc15", hell: "#fef9c3", rand: "#ca8a04" },
-  LOW: { label: "NIEDRIG", farbe: "#22c55e", hell: "#dcfce7", rand: "#16a34a" },
-  INFO: { label: "INFO", farbe: "#3b82f6", hell: "#dbeafe", rand: "#2563eb" },
+  CRITICAL: { label: "KRITISCH", farbe: "#f43225" },
+  HIGH: { label: "HOCH", farbe: "#ff8a3d" },
+  MEDIUM: { label: "MITTEL", farbe: "#f5c542" },
+  LOW: { label: "NIEDRIG", farbe: "#3ddc84" },
+  INFO: { label: "INFO", farbe: "#45dcff" },
 };
 
 const REIHENFOLGE = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
@@ -71,61 +70,65 @@ export default function AnalyseView() {
   }
 
   if (fehler) {
-    return <Rahmen><p style={{ color: "#b91c1c" }}>Fehler beim Laden: {fehler}</p></Rahmen>;
+    return <Rahmen><p className="hinweis fehler">Fehler beim Laden: {fehler}</p></Rahmen>;
   }
   if (!jobs) {
-    return <Rahmen><p>Lade Analysen …</p></Rahmen>;
+    return <Rahmen><p className="hinweis">Lade Analysen …</p></Rahmen>;
   }
   if (jobs.length === 0) {
     return (
       <Rahmen>
-        <p>Noch keine Analyse vorhanden.</p>
-        <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
+        <Kopf />
+        <p className="hinweis" style={{ marginBottom: 20 }}>Noch keine Analyse vorhanden.</p>
+        <div style={{ textAlign: "left" }}>
+          <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
+        </div>
       </Rahmen>
     );
   }
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", background: "#f4f4f5" }}>
-      <main style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
-        <h1 style={{ margin: "0 0 24px", fontSize: 30 }}>Analyse</h1>
+    <Rahmen>
+      <Kopf />
 
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
-          <label style={{ fontSize: 14, fontWeight: 600 }}>
-            Durchlauf:{" "}
-            <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value))} style={auswahlbox}>
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  Job {job.id} – {datum(job.created_at)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {analyse && <Infokasten text={`Ziel: ${analyse.job.target}`} />}
-          {analyse && <Infokasten text={`Status: ${analyse.job.status}`} />}
-          <div style={{ marginLeft: "auto" }}>
-            <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
-          </div>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+        <span className="karten-titel" style={{ margin: 0 }}>Durchlauf</span>
+        <select className="auswahlbox" value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value))}>
+          {jobs.map((job) => (
+            <option key={job.id} value={job.id}>
+              Job {job.id} – {datum(job.created_at)}
+            </option>
+          ))}
+        </select>
+        {analyse && <div className="info-kasten">Status: <b>{analyse.job.status}</b></div>}
+        <div style={{ marginLeft: "auto" }}>
+          <JobQueueKnopf queue={queue} fehler={queueFehler} onStart={jobStarten} />
         </div>
+      </div>
 
-        {analyse?.job.error_message && (
-          <div style={{ ...karte, background: "#fef9c3", borderColor: "#ca8a04", marginBottom: 20, fontSize: 14 }}>
-            ⚠️ {analyse.job.error_message}
-          </div>
-        )}
+      {analyse?.job.error_message && <div className="warnung">⚠ {analyse.job.error_message}</div>}
 
-        {!analyse ? <p>Lade Durchlauf …</p> : (
-          <JobInhalt
-            analyse={analyse}
-            auswahl={auswahl}
-            setAuswahl={setAuswahl}
-            geraetFilter={geraetFilter}
-            setGeraetFilter={setGeraetFilter}
-            stufenFilter={stufenFilter}
-            setStufenFilter={setStufenFilter}
-          />
-        )}
-      </main>
+      {!analyse ? <p className="hinweis">Lade Durchlauf …</p> : (
+        <JobInhalt
+          analyse={analyse}
+          auswahl={auswahl}
+          setAuswahl={setAuswahl}
+          geraetFilter={geraetFilter}
+          setGeraetFilter={setGeraetFilter}
+          stufenFilter={stufenFilter}
+          setStufenFilter={setStufenFilter}
+        />
+      )}
+    </Rahmen>
+  );
+}
+
+function Kopf() {
+  return (
+    <div>
+      <p className="oberzeile">Analyse / Befunde</p>
+      <h1 className="seitentitel">Risiken <span>erkennen</span></h1>
+      <p className="untertitel">Was Regeln und KI in den Konfigurationen gefunden haben.</p>
     </div>
   );
 }
@@ -146,11 +149,13 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
 
   return (
     <>
-      <div style={karte}>
-        <div style={{ fontWeight: 600, marginBottom: 14 }}>Analyseergebnis</div>
+      <div className="karte">
+        <div className="karten-titel">Analyseergebnis</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontSize: 14, whiteSpace: "nowrap" }}>{gesamt} Findings gefunden</span>
-          <div style={{ flex: 1, display: "flex", height: 16, borderRadius: 8, overflow: "hidden", background: "#e4e4e7" }}>
+          <span style={{ fontSize: 14, whiteSpace: "nowrap", color: "var(--text-hell)" }}>
+            <b style={{ color: "var(--text)", fontSize: 22 }}>{gesamt}</b> Findings gefunden
+          </span>
+          <div className="balken-spur" style={{ display: "flex", height: 10 }}>
             {REIHENFOLGE.map((stufe) =>
               stats[stufe] > 0 ? (
                 <div
@@ -163,15 +168,15 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 16 }}>
           <FilterKnopf aktiv={stufenFilter === "alle"} onClick={() => { setStufenFilter("alle"); setAuswahl(0); }}>
-            Alle ({gesamt})
+            ALLE ({gesamt})
           </FilterKnopf>
           {REIHENFOLGE.map((stufe) => (
             <FilterKnopf
               key={stufe}
               aktiv={stufenFilter === stufe}
-              farbe={SCHWEREGRAD[stufe]}
+              farbe={SCHWEREGRAD[stufe].farbe}
               onClick={() => { setStufenFilter(stufe); setAuswahl(0); }}
             >
               {SCHWEREGRAD[stufe].label} ({stats[stufe] ?? 0})
@@ -179,9 +184,10 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
           ))}
 
           <select
+            className="auswahlbox"
             value={geraetFilter}
             onChange={(e) => { setGeraetFilter(e.target.value); setAuswahl(0); }}
-            style={{ ...auswahlbox, marginLeft: "auto" }}
+            style={{ marginLeft: "auto" }}
           >
             <option value="alle">Alle Geräte</option>
             {geraeteNamen.map((name) => (
@@ -191,41 +197,25 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
         </div>
       </div>
 
-      {gesamt === 0 ? (
-        null
-      ) : (
+      {gesamt === 0 ? null : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
-          <div style={karte}>
-            <div style={{ fontWeight: 600, marginBottom: 14 }}>Findings ({funde.length})</div>
-            {funde.length === 0 && <p style={{ fontSize: 14, color: "#52525b" }}>Kein Finding passt zum Filter.</p>}
+          <div className="karte">
+            <div className="karten-titel">Findings ({funde.length})</div>
+            {funde.length === 0 && <p className="hinweis" style={{ fontSize: 14 }}>Kein Finding passt zum Filter.</p>}
             {funde.map((fund, index) => {
               const s = SCHWEREGRAD[fund.severity] || SCHWEREGRAD.INFO;
-              const aktiv = index === auswahl;
               return (
                 <button
                   key={fund.id}
+                  className={index === auswahl ? "finding aktiv" : "finding"}
                   onClick={() => setAuswahl(index)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    width: "100%",
-                    textAlign: "left",
-                    background: s.hell,
-                    border: `2px solid ${s.rand}`,
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    marginBottom: 10,
-                    cursor: "pointer",
-                    boxShadow: aktiv ? `0 0 0 3px ${s.rand}55` : "none",
-                    color: "#18181b",
-                  }}
+                  style={{ borderLeftColor: s.farbe }}
                 >
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.rand, flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{fund.title}</div>
-                    <div style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>
-                      {fund.device_name} · {fund.category}
+                    <div className="finding-titel">{fund.title}</div>
+                    <div className="finding-info">
+                      <span style={{ color: s.farbe, fontFamily: "var(--mono)", fontWeight: 700 }}>{s.label}</span>
+                      {" · "}{fund.device_name} · {fund.category}
                     </div>
                   </div>
                 </button>
@@ -233,9 +223,9 @@ function JobInhalt({ analyse, auswahl, setAuswahl, geraetFilter, setGeraetFilter
             })}
           </div>
 
-          <div style={karte}>
-            <div style={{ fontWeight: 600, marginBottom: 14 }}>Finding-Details</div>
-            {aktuell ? <Details fund={aktuell} /> : <p style={{ fontSize: 14, color: "#52525b" }}>Kein Finding ausgewählt.</p>}
+          <div className="karte">
+            <div className="karten-titel">Finding-Details</div>
+            {aktuell ? <Details fund={aktuell} /> : <p className="hinweis" style={{ fontSize: 14 }}>Kein Finding ausgewählt.</p>}
           </div>
         </div>
       )}
@@ -248,51 +238,24 @@ function Details({ fund }) {
 
   return (
     <div>
-      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>{fund.title}</div>
+      <span className="stufe" style={{ color: s.farbe, borderColor: s.farbe, marginBottom: 12 }}>{s.label}</span>
+      <div style={{ fontWeight: 700, fontSize: 20, margin: "12px 0 8px" }}>{fund.title}</div>
 
-      <div style={{ fontSize: 12, color: "#52525b", marginBottom: 8 }}>
-        Gerät: <b>{fund.device_name}</b> · Erkannt durch: {fund.detected_by === "llm" ? "KI" : "Regel"}
-        {fund.rule_id && <> · REGEL-{String(fund.rule_id).padStart(3, "0")}</>}
+      <div style={{ fontSize: 13, color: "var(--gedaempft)", marginBottom: 20 }}>
+        Gerät: <b style={{ color: "var(--text)" }}>{fund.device_name}</b> · Erkannt durch: {fund.detected_by === "llm" ? "KI" : "Regel"}
+        {fund.rule_id && <> · <span style={{ fontFamily: "var(--mono)" }}>REGEL-{String(fund.rule_id).padStart(3, "0")}</span></>}
       </div>
-
-      <span
-        style={{
-          display: "inline-block",
-          background: s.hell,
-          color: s.rand,
-          border: `2px solid ${s.rand}`,
-          borderRadius: 6,
-          padding: "4px 12px",
-          fontSize: 12,
-          fontWeight: 700,
-          marginBottom: 18,
-        }}
-      >
-        {s.label}
-      </span>
 
       <Abschnitt titel="Beschreibung">{fund.description}</Abschnitt>
       <Abschnitt titel="Warum ist das ein Problem?">{fund.reason}</Abschnitt>
 
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, color: "#52525b", marginBottom: 6 }}>Beleg aus der Konfiguration</div>
-        <pre
-          style={{
-            background: "#e4e4e7",
-            borderRadius: 8,
-            padding: 12,
-            margin: 0,
-            fontSize: 13,
-            whiteSpace: "pre-wrap",
-            fontFamily: "Consolas, monospace",
-          }}
-        >
-          {fund.evidence || "Kein Beleg vorhanden"}
-        </pre>
+      <div style={{ marginBottom: 18 }}>
+        <div className="feld-titel">Beleg aus der Konfiguration</div>
+        <pre className="beleg">{fund.evidence || "Kein Beleg vorhanden"}</pre>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, color: "#52525b", marginBottom: 6 }}>Handlungsempfehlung</div>
+      <div style={{ padding: "14px 16px", borderLeft: "3px solid var(--akzent)", background: "var(--flaeche-hell)" }}>
+        <div className="feld-titel">Handlungsempfehlung</div>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{fund.recommendation}</div>
       </div>
     </div>
@@ -300,19 +263,15 @@ function Details({ fund }) {
 }
 
 function FilterKnopf({ aktiv, onClick, farbe, children }) {
-  const rand = farbe ? farbe.rand : "#18181b";
+  const f = farbe || "#45dcff";
   return (
     <button
+      className="filter-knopf"
       onClick={onClick}
       style={{
-        border: `2px solid ${rand}`,
-        background: aktiv ? rand : "white",
-        color: aktiv ? "white" : rand,
-        borderRadius: 999,
-        padding: "4px 12px",
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer",
+        borderColor: aktiv ? f : undefined,
+        background: aktiv ? f : undefined,
+        color: aktiv ? "#05090d" : farbe,
       }}
     >
       {children}
@@ -322,66 +281,33 @@ function FilterKnopf({ aktiv, onClick, farbe, children }) {
 
 function Abschnitt({ titel, children }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 12, color: "#52525b", marginBottom: 4 }}>{titel}</div>
-      <div style={{ fontSize: 14, lineHeight: 1.5 }}>{children}</div>
+    <div style={{ marginBottom: 18 }}>
+      <div className="feld-titel">{titel}</div>
+      <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--text-hell)" }}>{children}</div>
     </div>
   );
 }
-
-function Infokasten({ text }) {
-  return (
-    <div style={{ background: "white", border: "1px solid #d4d4d8", borderRadius: 10, padding: "10px 16px", fontSize: 14 }}>
-      {text}
-    </div>
-  );
-}
-
 
 function JobQueueKnopf({ queue, fehler, onStart }) {
   return (
-    <div style={{ textAlign: "right" }}>
-      <button
-        onClick={onStart}
-        disabled={queue.laeuft}
-        style={{
-          background: queue.laeuft ? "#a1a1aa" : "#18181b",
-          color: "white",
-          border: "none",
-          borderRadius: 10,
-          padding: "10px 18px",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: queue.laeuft ? "default" : "pointer",
-        }}
-      >
-        {queue.laeuft ? `Job ${queue.job_id} läuft …` : "Kompletten Scan starten"}
+    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      {queue.laeuft && <span style={{ fontSize: 12, color: "var(--gedaempft)" }}>{queue.schritt}</span>}
+      {fehler && <span style={{ fontSize: 12, color: "var(--rot)" }}>{fehler}</span>}
+      <button className="knopf" onClick={onStart} disabled={queue.laeuft}>
+        {queue.laeuft ? `Job ${queue.job_id} läuft …` : "Scan starten"}
       </button>
-      {queue.laeuft && <div style={{ fontSize: 12, color: "#52525b", marginTop: 6 }}>{queue.schritt}</div>}
-      {fehler && <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 6 }}>{fehler}</div>}
     </div>
   );
 }
 
 function Rahmen({ children }) {
-  return <div style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>{children}</div>;
+  return (
+    <div className="seite">
+      <div className="seite-inhalt">{children}</div>
+    </div>
+  );
 }
 
 function datum(text) {
   return new Date(text).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" });
 }
-
-const karte = {
-  background: "white",
-  border: "1px solid #d4d4d8",
-  borderRadius: 16,
-  padding: 20,
-};
-
-const auswahlbox = {
-  padding: "8px 12px",
-  fontSize: 14,
-  border: "1px solid #d4d4d8",
-  borderRadius: 8,
-  background: "white",
-};
